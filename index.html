@@ -1,0 +1,2103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DB7 Groupe — Tableau de Bord Complet</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dark:#1A2E4A;--blue:#1F6FBF;--blueL:#D6E8FA;
+  --accent:#E8703A;--accentL:#FDE8DC;
+  --green:#1E7A45;--greenL:#D4EDDA;
+  --gray:#F4F5F7;--gray2:#E2E6EA;
+  --white:#fff;--text:#2C2C2C;--muted:#6C757D;
+  --bg:#0f172a;--card:#1e293b;--border:#334155;
+  --dim:#94a3b8;--bright:#f1f5f9;--orange:#f97316;
+  --shadow:0 4px 20px rgba(0,0,0,.15);
+  --purple:#a78bfa;--pink:#f472b6;--teal:#2dd4bf;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
+
+/* HEADER */
+.app-hd{background:linear-gradient(135deg,#1e293b,#0f172a);border-bottom:2px solid var(--orange);padding:11px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1000}
+.hd-logo{display:flex;align-items:center;gap:11px}
+.hd-badge{background:var(--orange);color:#fff;font-weight:900;font-size:18px;padding:5px 11px;border-radius:8px;letter-spacing:1px}
+.hd-text h1{font-size:15px;font-weight:700;color:var(--bright)}
+.hd-text p{font-size:10px;color:#64748b;margin-top:1px}
+.hd-right{display:flex;align-items:center;gap:12px}
+.hd-date{font-size:10px;color:#64748b;text-align:right}
+.hd-date strong{display:block;color:var(--orange);font-size:12px}
+.notif-btn{background:#1e293b;border:1px solid var(--border);color:#94a3b8;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px;position:relative;transition:all .2s}
+.notif-btn:hover{border-color:var(--orange);color:var(--orange)}
+.notif-dot{position:absolute;top:3px;right:3px;width:7px;height:7px;background:#ef4444;border-radius:50%;border:1px solid #0f172a}
+
+/* NAV */
+.nav-tabs{background:#1e293b;border-bottom:1px solid var(--border);display:flex;padding:0 18px;gap:1px;overflow-x:auto;position:sticky;top:57px;z-index:999}
+.ntab{padding:10px 13px;border:none;background:transparent;color:#64748b;font-size:11.5px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.ntab:hover{color:var(--bright)}
+.ntab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.panel{display:none}.panel.active{display:block}
+
+/* DARK SECTION BASE */
+.db{padding:16px 22px 28px}
+.sc{background:var(--card);border-radius:11px;padding:15px;border:1px solid var(--border);transition:transform .2s,border-color .2s;cursor:default}
+.sc:hover{transform:translateY(-2px);border-color:var(--orange)}
+.sc .sl{font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.sc .sv{font-size:24px;font-weight:800;line-height:1}
+.sc .ss{font-size:9.5px;color:#64748b;margin-top:4px}
+.c-or .sv{color:var(--orange)}.c-bl .sv{color:#38bdf8}.c-gr .sv{color:#4ade80}.c-yw .sv{color:#fbbf24}.c-rd .sv{color:#f87171}.c-pu .sv{color:var(--purple)}.c-te .sv{color:var(--teal)}.c-pk .sv{color:var(--pink)}
+.ds{background:var(--card);border-radius:11px;border:1px solid var(--border);overflow:hidden}
+.dsh{padding:10px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.dsh h2{font-size:12px;font-weight:700;color:var(--bright);display:flex;align-items:center;gap:5px}
+.dsh span{font-size:10px;color:#64748b}
+
+/* ══ VUE GLOBALE ══ */
+.vg{padding:16px 22px 32px;background:var(--bg)}
+.vg-top{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.vg-mid{display:grid;grid-template-columns:1fr 1fr 340px;gap:12px;margin-bottom:14px}
+.vg-bot{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vg-card{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:14px}
+.vg-card h3{font-size:11px;font-weight:700;color:var(--bright);margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.alert-bar{background:#1c1917;border:1px solid #f97316;border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.alert-bar .ab-ic{font-size:18px;flex-shrink:0}
+.alert-bar .ab-txt{font-size:11px;color:#fed7aa;line-height:1.5}
+.alert-bar .ab-txt strong{color:var(--orange)}
+.funnel{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.funnel-step{display:flex;align-items:center;gap:8px}
+.funnel-bar-wrap{flex:1;background:#0f172a;border-radius:4px;height:22px;overflow:hidden;position:relative}
+.funnel-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:9px;font-weight:700;color:#fff;transition:width .8s ease}
+.funnel-label{font-size:9.5px;color:#94a3b8;width:110px;flex-shrink:0}
+.funnel-count{font-size:10px;font-weight:700;color:var(--bright);width:25px;text-align:right;flex-shrink:0}
+.activity-feed{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.activity-feed::-webkit-scrollbar{width:3px}
+.activity-feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.act-item{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;background:#0f172a;border-radius:7px;border-left:3px solid transparent}
+.act-item.act-green{border-left-color:#4ade80}
+.act-item.act-orange{border-left-color:var(--orange)}
+.act-item.act-blue{border-left-color:#38bdf8}
+.act-item.act-purple{border-left-color:var(--purple)}
+.act-ic{font-size:14px;flex-shrink:0;margin-top:1px}
+.act-body{flex:1}
+.act-txt{font-size:10px;color:#cbd5e1;line-height:1.4}
+.act-time{font-size:8.5px;color:#475569;margin-top:2px}
+.qs-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.qs-btn{background:#0f172a;border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;text-align:center;transition:all .2s;color:var(--bright)}
+.qs-btn:hover{border-color:var(--orange);background:#1e293b}
+.qs-btn .qi{font-size:18px;display:block;margin-bottom:4px}
+.qs-btn .ql{font-size:10px;font-weight:600}
+.mini-kpi{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #0f172a}
+.mini-kpi:last-child{border-bottom:none}
+.mini-kpi .mk-l{font-size:10px;color:#94a3b8}
+.mini-kpi .mk-v{font-size:12px;font-weight:800}
+.obj-row{margin-bottom:10px}
+.obj-row .or-top{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.obj-row .or-top span:first-child{color:#94a3b8}
+.obj-row .or-top span:last-child{color:var(--bright);font-weight:700}
+.obj-bar{height:6px;background:#0f172a;border-radius:3px;overflow:hidden}
+.obj-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.notes-area{width:100%;background:#0f172a;border:1px solid var(--border);color:var(--bright);border-radius:8px;padding:10px;font-size:11px;line-height:1.6;resize:vertical;min-height:100px;font-family:inherit;outline:none}
+.notes-area:focus{border-color:var(--orange)}
+.save-note-btn{margin-top:6px;background:var(--orange);color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer}
+
+/* ══ CRM / MAP ══ */
+.sg{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.dg{display:grid;grid-template-columns:1fr 330px;gap:12px;margin-bottom:14px}
+#map{height:420px}
+.mleg{padding:8px 14px;display:flex;gap:11px;flex-wrap:wrap;border-top:1px solid var(--border)}
+.mli{display:flex;align-items:center;gap:5px;font-size:9.5px;color:#94a3b8}
+.mld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dsb{display:flex;flex-direction:column;gap:10px}
+.dflt{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:12px}
+.dflt h3{font-size:10.5px;font-weight:700;color:var(--bright);margin-bottom:8px}
+.dfg{margin-bottom:7px}
+.dfg label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+.dfg select,.dfg input{width:100%;background:#0f172a;border:1px solid var(--border);color:var(--bright);padding:6px 9px;border-radius:7px;font-size:11px;outline:none}
+.dfg select:focus,.dfg input:focus{border-color:var(--orange)}
+.dreset{background:#334155;color:#94a3b8;border:none;padding:6px 12px;border-radius:7px;font-size:10px;cursor:pointer;width:100%;transition:all .2s}
+.dreset:hover{background:var(--orange);color:#fff}
+.dlw{background:var(--card);border-radius:11px;border:1px solid var(--border);overflow:hidden}
+.dscr{max-height:270px;overflow-y:auto}
+.dscr::-webkit-scrollbar{width:3px}
+.dscr::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.dit{padding:8px 12px;border-bottom:1px solid #0f172a;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s}
+.dit:hover{background:#0f172a}.dit.act{background:#0f172a;border-left:3px solid var(--orange)}
+.di-ic{font-size:16px;flex-shrink:0}
+.di-bd{flex:1;min-width:0}
+.di-nm{font-size:11px;font-weight:600;color:var(--bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.di-mt{font-size:9px;color:#64748b;margin-top:1px}
+.di-bg{display:flex;gap:2px;flex-direction:column;align-items:flex-end;flex-shrink:0}
+.dbg{font-size:8px;padding:2px 5px;border-radius:7px;font-weight:600;white-space:nowrap}
+.dbg-h{background:#431407;color:var(--orange)}.dbg-m{background:#1c1917;color:#fbbf24}.dbg-b{background:#052e16;color:#4ade80}.dbg-c{background:#14532d;color:#4ade80}
+.ddet{background:#0f172a;border-radius:9px;border:1px solid var(--orange);padding:12px;display:none}
+.ddet.vis{display:block}
+.ddet h3{font-size:12px;font-weight:700;color:var(--orange);margin-bottom:8px}
+.ddr{display:flex;gap:5px;margin-bottom:4px;font-size:10px}
+.ddr .dk{color:#64748b;width:60px;flex-shrink:0}
+.ddr .dv{color:var(--bright)}
+.dbox{background:var(--card);border-radius:6px;padding:8px;margin-top:4px;font-size:9px;color:#94a3b8;line-height:1.5}
+.dbox strong{display:block;color:#60a5fa;margin-bottom:2px;font-size:9px}
+.dpg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.dpc{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:13px}
+.dpc h3{font-size:11.5px;font-weight:700;color:var(--bright);margin-bottom:9px}
+.dpi{margin-bottom:8px}
+.dpi-l{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.dpi-l span:first-child{color:#94a3b8}.dpi-l span:last-child{color:var(--bright);font-weight:600}
+.dpb{height:5px;background:#0f172a;border-radius:3px;overflow:hidden}
+.dpf{height:100%;border-radius:3px}
+.dpib{background:#0f172a;border-radius:7px;padding:9px;margin-top:8px}
+.dtbl{width:100%;border-collapse:collapse;background:var(--card);border-radius:9px;overflow:hidden;font-size:11px}
+.dtbl th{background:#0f172a;padding:8px 12px;text-align:left;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.dtbl td{padding:7px 12px;border-bottom:1px solid #0f172a;color:#cbd5e1;vertical-align:middle}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl tr:hover td{background:#0f172a;cursor:pointer}
+.pdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+
+/* ══ CALCULATEUR / DEVIS (light) ══ */
+.cb{padding:20px 22px 44px;background:linear-gradient(135deg,var(--dark),#1F4F8F);min-height:calc(100vh - 110px)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.gf{grid-column:1/-1}
+@media(max-width:800px){.g2,.g3,.dg,.sg,.dpg,.vg-top,.vg-mid,.vg-bot{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:13px;box-shadow:var(--shadow);padding:16px;margin-bottom:10px}
+.ct{font-size:13px;font-weight:700;color:var(--dark);margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.ig{margin-bottom:10px}
+.ig label{display:block;font-weight:600;font-size:.78rem;color:var(--dark);margin-bottom:3px}
+.ig input,.ig textarea,.ig select{width:100%;border:2px solid var(--gray2);border-radius:7px;padding:7px 10px;font-size:.88rem;color:var(--dark);outline:none;transition:border-color .2s;font-family:inherit}
+.ig input:focus,.ig textarea:focus,.ig select:focus{border-color:var(--blue)}
+.ig textarea{resize:vertical;min-height:52px}
+.pw{position:relative}
+.pw input{padding-left:26px}
+.pw .eu{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:600}
+.sr{display:flex;align-items:center;gap:8px}
+.sr input[type=range]{flex:1;accent-color:var(--blue)}
+.sv2{font-size:.88rem;font-weight:800;color:var(--blue);min-width:38px;text-align:right}
+.rm{background:linear-gradient(135deg,var(--dark),#1F4F8F);border-radius:9px;padding:15px;text-align:center;margin-bottom:10px;color:#fff}
+.rm .rl{font-size:.72rem;opacity:.7;margin-bottom:2px}
+.rm .rp{font-size:1.9rem;font-weight:900;letter-spacing:-1px}
+.rm .rp span{font-size:1rem}
+.rm .rs{font-size:.68rem;opacity:.55;margin-top:2px}
+.rg3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.rb{background:var(--gray);border-radius:6px;padding:8px 5px;text-align:center}
+.rb .rl2{font-size:.67rem;color:var(--muted);margin-bottom:2px}
+.rb .rv{font-size:.88rem;font-weight:800;color:var(--dark)}
+.rb.g{background:var(--greenL)}.rb.g .rv{color:var(--green)}
+.rb.o{background:var(--accentL)}.rb.o .rv{color:var(--accent)}
+.bw{margin-bottom:10px}
+.bl2{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:2px}
+.bb{background:var(--gray2);border-radius:5px;height:9px;overflow:hidden;display:flex}
+.bc{background:#1A2E4A;height:100%;transition:width .3s}
+.bm{background:#1E7A45;height:100%;transition:width .3s}
+.bleg{display:flex;gap:9px;margin-top:3px;font-size:.67rem}
+.bld{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:2px}
+.btn{width:100%;border:none;border-radius:8px;padding:9px;font-size:.86rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-add{background:var(--accent);color:#fff}.btn-add:hover{background:#C85E24}
+.btn-pri{background:var(--blue);color:#fff}.btn-pri:hover{background:#165A9E}
+.btn-suc{background:var(--green);color:#fff}.btn-suc:hover{background:#165A34}
+.btn-out{background:none;border:2px solid var(--gray2);color:var(--muted)}.btn-out:hover{border-color:#E74C3C;color:#E74C3C}
+.btn:active{transform:scale(.98)}
+.hem{text-align:center;color:var(--muted);font-size:.82rem;padding:16px 0}
+.hi{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:var(--gray);margin-bottom:4px;position:relative}
+.hi:hover{background:var(--gray2)}
+.hi-ic{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.88rem;flex-shrink:0}
+.hi-ic.p{background:#E8F4FD}.hi-ic.s{background:#EAF7F0}.hi-ic.g{background:#D4EDDA}.hi-ic.t{background:#FDECEA}.hi-ic.go{background:#F0EBFF}
+.hi-bd{flex:1}
+.hi-nm{font-weight:700;font-size:.8rem;color:var(--dark)}
+.hi-dt{font-size:.68rem;color:var(--muted)}
+.hi-pr{text-align:right;flex-shrink:0}
+.hi-sl{font-size:.88rem;font-weight:800;color:var(--dark)}
+.hi-bn{font-size:.67rem;color:var(--green);font-weight:700}
+.hi-dl{position:absolute;top:5px;right:5px;background:none;border:none;color:#ccc;cursor:pointer;font-size:.73rem;padding:2px 4px;border-radius:4px}
+.hi-dl:hover{color:#E74C3C}
+.smg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.sb{background:var(--gray);border-radius:8px;padding:10px 7px;text-align:center}
+.sb .sl{font-size:.68rem;color:var(--muted);margin-bottom:3px}
+.sb .sv{font-size:1rem;font-weight:800;color:var(--dark)}
+.sb.bl{background:var(--blueL)}.sb.bl .sv{color:var(--blue)}
+.sb.ac{background:var(--accentL)}.sb.ac .sv{color:var(--accent)}
+.tb{text-align:center;padding:11px;background:linear-gradient(135deg,#1A2E4A,#1F6FBF);border-radius:9px;color:#fff;margin-top:8px}
+.tb .tl{font-size:.72rem;opacity:.75;margin-bottom:2px}
+.tb .tv{font-size:1.6rem;font-weight:900}
+.stp{display:flex;gap:10px;margin-bottom:13px}
+.sn{width:23px;height:23px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.76rem;flex-shrink:0}
+.sb2 h4{font-size:.84rem;color:var(--dark);font-weight:700;margin-bottom:2px}
+.sb2 p{font-size:.76rem;color:var(--muted);line-height:1.5}
+.cmdb{background:var(--gray);border:2px solid var(--gray2);border-radius:8px;padding:11px;font-family:monospace;font-size:.76rem;color:var(--dark);white-space:pre-wrap;line-height:1.6;cursor:pointer;transition:border-color .2s}
+.cmdb:hover{border-color:var(--blue)}
+.fmt-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
+.fmt-btn{border:2px solid var(--gray2);border-radius:9px;padding:9px 6px;cursor:pointer;text-align:center;background:var(--gray);transition:all .2s;position:relative}
+.fmt-btn:hover,.fmt-btn.active{border-color:var(--blue);background:var(--blueL)}
+.fmt-btn .fi{font-size:1.2rem;display:block;margin-bottom:3px}
+.fmt-btn .fn{font-weight:700;font-size:.76rem;color:var(--dark)}
+.fmt-btn .fe{font-size:.63rem;color:var(--muted);margin-top:2px;line-height:1.3}
+.fmt-btn .fm{position:absolute;top:4px;right:6px;font-size:.63rem;font-weight:700;color:var(--green);background:var(--greenL);padding:1px 5px;border-radius:20px}
+.fi2{background:var(--blueL);border-radius:7px;padding:7px 10px;font-size:.76rem;color:var(--dark);line-height:1.5;margin-bottom:6px}
+.cat-grid{display:grid;grid-template-columns:1fr;gap:3px;max-height:340px;overflow-y:auto}
+.cat-item{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;border-radius:7px;background:var(--gray);cursor:pointer;transition:background .15s;border:1px solid transparent}
+.cat-item:hover{background:var(--blueL);border-color:var(--blue)}
+.cat-item .ci-l{display:flex;align-items:center;gap:7px}
+.cat-item .ci-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.82rem}
+.cat-item .ci-icon.p{background:#E8F4FD}.cat-item .ci-icon.m{background:#FFF3CD}.cat-item .ci-icon.g{background:#D4EDDA}
+.cat-item .ci-name{font-size:.76rem;font-weight:700;color:var(--dark)}
+.cat-item .ci-sub{font-size:.63rem;color:var(--muted)}
+.cat-item .ci-price{font-size:.78rem;font-weight:800;color:var(--green)}
+.cat-sep{font-size:.68rem;font-weight:700;color:var(--blue);padding:5px 0 2px;text-transform:uppercase;letter-spacing:.5px}
+.tpl-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px}
+.tpl-tab{padding:4px 9px;border:1.5px solid var(--gray2);border-radius:20px;font-size:.73rem;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;background:none}
+.tpl-tab:hover,.tpl-tab.active{border-color:var(--blue);color:var(--blue);background:var(--blueL)}
+.tpl-body{background:var(--gray);border-radius:9px;padding:13px;font-size:.78rem;color:var(--dark);line-height:1.7;white-space:pre-wrap;min-height:120px;border:2px solid var(--gray2);cursor:pointer;transition:border-color .2s}
+.tpl-body:hover{border-color:var(--blue)}
+
+/* ══ COMMANDES ══ */
+.cmd-body{padding:16px 22px 32px;background:var(--bg)}
+.cmd-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.cmd-grid{display:grid;grid-template-columns:340px 1fr;gap:12px;margin-bottom:16px}
+.cmd-form{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px}
+.cmd-form h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px}
+.cmd-ig{margin-bottom:8px}
+.cmd-ig label{font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+.cmd-ig input,.cmd-ig select,.cmd-ig textarea{width:100%;background:#0f172a;border:1px solid var(--border);color:var(--bright);padding:6px 9px;border-radius:7px;font-size:11px;outline:none;font-family:inherit}
+.cmd-ig input:focus,.cmd-ig select:focus{border-color:var(--orange)}
+.cmd-ig textarea{resize:vertical;min-height:50px}
+.btn-cmd{width:100%;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff;margin-top:4px}
+.btn-cmd:hover{background:#ea6e0a}
+.pipeline-wrap{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:14px}
+.pipeline-wrap h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:12px}
+.pipeline-cols{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;min-height:200px}
+.pipeline-col{background:#0f172a;border-radius:9px;padding:8px;min-height:150px}
+.pipeline-col-hd{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;padding:3px 6px;border-radius:5px;text-align:center}
+.pipeline-card{background:var(--card);border-radius:7px;padding:8px;margin-bottom:5px;border:1px solid var(--border);cursor:pointer;transition:border-color .2s}
+.pipeline-card:hover{border-color:var(--orange)}
+.pipeline-card .pc-nm{font-size:10px;font-weight:700;color:var(--bright);margin-bottom:2px}
+.pipeline-card .pc-mt{font-size:9px;color:#64748b}
+.pipeline-card .pc-am{font-size:10px;font-weight:700;color:#4ade80;margin-top:3px}
+.cmd-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:9px;overflow:hidden;font-size:11px}
+.cmd-table th{background:#0f172a;padding:8px 11px;text-align:left;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.cmd-table td{padding:7px 11px;border-bottom:1px solid #0f172a;color:#cbd5e1;vertical-align:middle}
+.cmd-table tr:last-child td{border-bottom:none}
+.status-badge{font-size:8.5px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
+.s-devis{background:#1e3a5f;color:#60a5fa}
+.s-prod{background:#1e1b4b;color:var(--purple)}
+.s-exp{background:#1c1917;color:#fbbf24}
+.s-livr{background:#1c2526;color:var(--teal)}
+.s-fac{background:#052e16;color:#4ade80}
+.s-pay{background:#14532d;color:#86efac}
+.cmd-del{background:none;border:none;color:#334155;cursor:pointer;font-size:10px;padding:2px 5px;border-radius:4px}
+.cmd-del:hover{color:#ef4444}
+
+/* ══ PROSPECTION ══ */
+.prosp-body{padding:16px 22px 32px;background:var(--bg)}
+.prosp-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.prosp-list{display:flex;flex-direction:column;gap:7px}
+.pc{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:13px;display:flex;align-items:center;gap:12px;transition:border-color .2s}
+.pc:hover{border-color:var(--orange)}
+.pc-icon{font-size:24px;flex-shrink:0}
+.pc-info{flex:1;min-width:0}
+.pc-name{font-size:13px;font-weight:700;color:var(--bright);margin-bottom:2px}
+.pc-meta{font-size:10px;color:#64748b}
+.pc-besoins{font-size:10px;color:#94a3b8;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px}
+.pc-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.pca{padding:4px 9px;border-radius:7px;border:none;font-size:9.5px;font-weight:700;cursor:pointer;transition:all .2s}
+.pca-email{background:#1e3a5f;color:#60a5fa}.pca-email:hover{background:#1d4ed8;color:#fff}
+.pca-call{background:#1a2e1a;color:#4ade80}.pca-call:hover{background:#166534;color:#fff}
+.pca-stat{background:#334155;color:#94a3b8}.pca-stat:hover{background:var(--orange);color:#fff}
+.pc-prio{font-size:8.5px;padding:2px 7px;border-radius:10px;font-weight:700}
+.pp-h{background:#431407;color:var(--orange)}.pp-m{background:#1c1917;color:#fbbf24}.pp-b{background:#052e16;color:#4ade80}
+.stat-badge{font-size:8.5px;padding:2px 7px;border-radius:10px;font-weight:700;background:#1e3a5f;color:#60a5fa}
+
+/* ══ FINANCES ══ */
+.fin-body{padding:16px 22px 32px;background:var(--bg)}
+.fin-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.fin-grid{display:grid;grid-template-columns:1fr 360px;gap:12px;margin-bottom:16px}
+.fin-tabs{display:flex;gap:4px;margin-bottom:12px}
+.fin-tab{padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:10.5px;font-weight:600;color:#64748b;cursor:pointer;background:none;transition:all .2s}
+.fin-tab.active{border-color:var(--orange);color:var(--orange);background:#431407}
+.fin-form{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px}
+.fin-form h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px}
+.fin-ig{margin-bottom:8px}
+.fin-ig label{font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+.fin-ig input,.fin-ig select{width:100%;background:#0f172a;border:1px solid var(--border);color:var(--bright);padding:6px 9px;border-radius:7px;font-size:11px;outline:none}
+.fin-ig input:focus{border-color:var(--orange)}
+.btn-fin{width:100%;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff;margin-top:4px}
+.btn-fin:hover{background:#ea6e0a}
+.btn-fin-dep{background:#ef4444}
+.btn-fin-dep:hover{background:#dc2626}
+.plafond-card{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px}
+.plafond-card h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px}
+.pla-bar{height:16px;background:#0f172a;border-radius:9px;overflow:hidden;margin-bottom:5px}
+.pla-fill{height:100%;border-radius:9px;transition:width 1s ease;background:linear-gradient(90deg,#4ade80,#fbbf24)}
+.pla-fill.warn{background:linear-gradient(90deg,#fbbf24,#f97316)}
+.pla-fill.danger{background:linear-gradient(90deg,#f97316,#ef4444)}
+.urssaf-box{background:#0f172a;border-radius:8px;padding:11px;margin-top:9px}
+.fin-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:9px;overflow:hidden;font-size:11px}
+.fin-table th{background:#0f172a;padding:8px 11px;text-align:left;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.fin-table td{padding:7px 11px;border-bottom:1px solid #0f172a;color:#cbd5e1;vertical-align:middle}
+.fin-table tr:last-child td{border-bottom:none}
+.fin-del{background:none;border:none;color:#334155;cursor:pointer;font-size:10px;padding:2px 5px;border-radius:4px}
+.fin-del:hover{color:#ef4444;background:#1f1f1f}
+.bar-months{display:flex;align-items:flex-end;gap:5px;height:80px;margin-top:7px}
+.bm-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.bm-bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .5s}
+.bm-lbl{font-size:7.5px;color:#64748b}
+.bm-val{font-size:7px;color:#94a3b8}
+.fin-bilanrow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #0f172a;font-size:10px}
+.fin-bilanrow:last-child{border-bottom:none}
+.fin-bilanrow .fb-l{color:#94a3b8}
+.fin-bilanrow .fb-v{font-weight:700}
+
+/* ══ TÂCHES ══ */
+.tsk-body{padding:16px 22px 32px;background:var(--bg)}
+.tsk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.tsk-grid{display:grid;grid-template-columns:320px 1fr;gap:12px}
+.tsk-form{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:14px}
+.tsk-form h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:10px}
+.tsk-ig{margin-bottom:8px}
+.tsk-ig label{font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+.tsk-ig input,.tsk-ig select{width:100%;background:#0f172a;border:1px solid var(--border);color:var(--bright);padding:6px 9px;border-radius:7px;font-size:11px;outline:none}
+.tsk-ig input:focus,.tsk-ig select:focus{border-color:var(--orange)}
+.btn-tsk{width:100%;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff;margin-top:4px}
+.btn-tsk:hover{background:#ea6e0a}
+.tsk-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.tsk-col{background:#0f172a;border-radius:10px;padding:10px;min-height:200px}
+.tsk-col-hd{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:4px 8px;border-radius:5px;display:flex;align-items:center;justify-content:space-between}
+.tsk-card{background:var(--card);border-radius:8px;padding:10px;margin-bottom:6px;border:1px solid var(--border);transition:border-color .2s}
+.tsk-card:hover{border-color:var(--orange)}
+.tsk-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:4px}
+.tsk-card-title{font-size:11px;font-weight:600;color:var(--bright);flex:1}
+.tsk-card-meta{font-size:9px;color:#64748b;margin-top:3px}
+.tsk-actions{display:flex;gap:4px;margin-top:6px}
+.tsk-btn{font-size:9px;padding:2px 7px;border-radius:5px;border:none;cursor:pointer;font-weight:600;transition:all .2s}
+.tsk-done{background:#052e16;color:#4ade80}.tsk-done:hover{background:#166534;color:#fff}
+.tsk-prog{background:#1e1b4b;color:var(--purple)}.tsk-prog:hover{background:#4c1d95;color:#fff}
+.tsk-del-btn{background:#1f1f1f;color:#64748b}.tsk-del-btn:hover{background:#7f1d1d;color:#f87171}
+.cat-badge{font-size:8.5px;padding:2px 6px;border-radius:8px;font-weight:700}
+.cat-prosp{background:#1e3a5f;color:#60a5fa}
+.cat-devis{background:#1c2526;color:var(--teal)}
+.cat-admin{background:#1e1b4b;color:var(--purple)}
+.cat-livr{background:#1c1917;color:#fbbf24}
+.cat-fin{background:#052e16;color:#4ade80}
+.cat-autre{background:#1e293b;color:#94a3b8}
+.prio-u{color:#ef4444;font-size:9px;font-weight:700}
+.prio-n{color:#fbbf24;font-size:9px;font-weight:700}
+.prio-b{color:#94a3b8;font-size:9px;font-weight:700}
+.echeance-red{color:#ef4444;font-weight:700}
+.echeance-orange{color:#f97316;font-weight:700}
+
+/* ══ STATISTIQUES ══ */
+.stat-body{padding:16px 22px 32px;background:var(--bg)}
+.stat-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.stat-card{background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px}
+.stat-card h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px}
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:100px;padding-bottom:4px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.chart-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .6s ease}
+.chart-label{font-size:7.5px;color:#64748b;text-align:center}
+.chart-val{font-size:7px;color:#94a3b8}
+.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto}
+.donut-svg{transform:rotate(-90deg)}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.donut-center .dc-v{font-size:18px;font-weight:800;color:var(--bright)}
+.donut-center .dc-l{font-size:9px;color:#64748b}
+.legend-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:10px;border-bottom:1px solid #0f172a}
+.legend-row:last-child{border-bottom:none}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;margin-right:5px}
+.lr-left{display:flex;align-items:center;color:#94a3b8}
+.lr-right{font-weight:700;color:var(--bright)}
+.proj-card{background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid var(--border);border-radius:11px;padding:15px}
+.proj-card h3{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px}
+.proj-big{font-size:32px;font-weight:900;color:var(--orange);margin-bottom:4px}
+.proj-sub{font-size:10px;color:#64748b}
+.top-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #0f172a}
+.top-item:last-child{border-bottom:none}
+.top-rank{font-size:11px;font-weight:800;color:#64748b;width:20px;flex-shrink:0}
+.top-info{flex:1}
+.top-name{font-size:11px;font-weight:700;color:var(--bright)}
+.top-sub{font-size:9px;color:#64748b;margin-top:1px}
+.top-val{font-size:11px;font-weight:800;color:var(--orange)}
+.perf-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.perf-label{font-size:10px;color:#94a3b8;width:120px;flex-shrink:0}
+.perf-bar-wrap{flex:1;background:#0f172a;border-radius:4px;height:16px;overflow:hidden}
+.perf-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:8px;font-weight:700;color:#fff}
+.perf-val{font-size:10px;font-weight:700;color:var(--bright);width:45px;text-align:right;flex-shrink:0}
+
+/* ══ FLUX / MODAL / DIVERS ══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
+.modal-overlay.vis{display:flex}
+.modal{background:#1e293b;border:1px solid var(--orange);border-radius:14px;padding:20px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:14px;font-weight:700;color:var(--orange);margin-bottom:13px}
+.modal textarea{width:100%;background:#0f172a;border:1px solid var(--border);color:var(--bright);border-radius:8px;padding:11px;font-size:11px;line-height:1.7;resize:vertical;min-height:240px;font-family:inherit;outline:none}
+.modal textarea:focus{border-color:var(--orange)}
+.modal-btns{display:flex;gap:8px;margin-top:11px}
+.mbtn{flex:1;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer}
+.mbtn-copy{background:var(--green);color:#fff}.mbtn-copy:hover{background:#166534}
+.mbtn-close{background:#334155;color:#94a3b8}.mbtn-close:hover{background:#4b5563;color:#fff}
+
+/* detail modal commande */
+.cmd-detail{background:var(--card);border-radius:11px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px}
+
+/* responsive */
+@media(max-width:900px){.cmd-kpis,.fin-kpis,.cmd-grid,.tsk-grid,.tsk-cols,.pipeline-cols,.stat-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="app-hd">
+  <div class="hd-logo">
+    <div class="hd-badge">DB7</div>
+    <div class="hd-text">
+      <h1>DB7 Groupe — Tableau de Bord Complet</h1>
+      <p>8 rue de Marcodey, 70000 Vesoul &nbsp;·&nbsp; contact@db7groupe.com &nbsp;·&nbsp; SIRET 883 970 212 00014</p>
+    </div>
+  </div>
+  <div class="hd-right">
+    <button class="notif-btn" onclick="showTab('taches')" title="Tâches en attente"><span id="notif-count">✅</span><span class="notif-dot" id="notif-dot" style="display:none"></span></button>
+    <div class="hd-date"><strong id="live-date"></strong><span>Micro-entreprise — Art. 293 B CGI</span></div>
+  </div>
+</header>
+
+<nav class="nav-tabs">
+  <button class="ntab active" onclick="showTab('global')">🏠 Vue Globale</button>
+  <button class="ntab" onclick="showTab('dashboard')">🗺️ CRM Prospects</button>
+  <button class="ntab" onclick="showTab('calc')">🧮 Calculateur</button>
+  <button class="ntab" onclick="showTab('devis')">📄 Devis</button>
+  <button class="ntab" onclick="showTab('commandes')">📦 Commandes</button>
+  <button class="ntab" onclick="showTab('prosp')">📣 Prospection</button>
+  <button class="ntab" onclick="showTab('fin')">💰 Finances</button>
+  <button class="ntab" onclick="showTab('taches')">✅ Tâches</button>
+  <button class="ntab" onclick="showTab('stats')">📊 Statistiques</button>
+  <button class="ntab" onclick="showTab('flux')">⚡ Flux</button>
+</nav>
+
+<!-- ══════════ TAB 0 — VUE GLOBALE ══════════ -->
+<div class="panel active" id="tab-global">
+<div class="vg">
+
+  <div id="vg-alert" class="alert-bar" style="display:none">
+    <div class="ab-ic">⚠️</div>
+    <div class="ab-txt" id="vg-alert-txt"></div>
+  </div>
+
+  <div class="vg-top" id="vg-kpis">
+    <div class="sc c-or"><div class="sl">💶 CA Total</div><div class="sv" id="vg-ca">0 €</div><div class="ss">depuis le début</div></div>
+    <div class="sc c-gr"><div class="sl">📅 CA ce mois</div><div class="sv" id="vg-mois">0 €</div><div class="ss" id="vg-mois-lbl">—</div></div>
+    <div class="sc c-bl"><div class="sl">🔥 Prospects chauds</div><div class="sv" id="vg-chauds">4</div><div class="ss">priorité haute</div></div>
+    <div class="sc c-yw"><div class="sl">📦 Commandes actives</div><div class="sv" id="vg-cmd">0</div><div class="ss">en cours</div></div>
+    <div class="sc c-pu"><div class="sl">✅ Tâches urgentes</div><div class="sv" id="vg-tsk">0</div><div class="ss">à traiter</div></div>
+  </div>
+
+  <div class="vg-mid">
+    <!-- Objectifs -->
+    <div class="vg-card">
+      <h3>🎯 Objectifs du mois</h3>
+      <div class="obj-row">
+        <div class="or-top"><span>CA Mensuel (objectif 3 000 €)</span><span id="obj-ca-pct">0%</span></div>
+        <div class="obj-bar"><div class="obj-fill" id="obj-ca-fill" style="width:0%;background:#4ade80"></div></div>
+      </div>
+      <div class="obj-row">
+        <div class="or-top"><span>Prospects contactés (objectif 5/mois)</span><span id="obj-prosp-pct">0%</span></div>
+        <div class="obj-bar"><div class="obj-fill" id="obj-prosp-fill" style="width:0%;background:#38bdf8"></div></div>
+      </div>
+      <div class="obj-row">
+        <div class="or-top"><span>Devis envoyés (objectif 3/mois)</span><span id="obj-devis-pct">0%</span></div>
+        <div class="obj-bar"><div class="obj-fill" id="obj-devis-fill" style="width:0%;background:var(--orange)"></div></div>
+      </div>
+      <div class="obj-row" style="margin-top:10px">
+        <div class="or-top"><span>Plafond micro-entreprise 2026</span><span id="obj-pla-pct">0%</span></div>
+        <div class="obj-bar"><div class="obj-fill" id="obj-pla-fill" style="width:0%;background:#fbbf24"></div></div>
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+        <div class="mini-kpi"><span class="mk-l">Taux de conversion</span><span class="mk-v" id="vg-taux" style="color:#4ade80">—</span></div>
+        <div class="mini-kpi"><span class="mk-l">Panier moyen</span><span class="mk-v" id="vg-panier" style="color:#38bdf8">—</span></div>
+        <div class="mini-kpi"><span class="mk-l">Bénéfice estimé</span><span class="mk-v" id="vg-benef" style="color:var(--orange)">—</span></div>
+        <div class="mini-kpi"><span class="mk-l">Plafond restant</span><span class="mk-v" id="vg-plafond" style="color:#fbbf24">77 700 €</span></div>
+      </div>
+    </div>
+
+    <!-- Funnel commercial -->
+    <div class="vg-card">
+      <h3>🔽 Funnel Commercial</h3>
+      <div class="funnel">
+        <div class="funnel-step">
+          <div class="funnel-label">Prospects total</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" style="width:100%;background:#334155">13</div></div>
+          <div class="funnel-count" style="color:#94a3b8">13</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">🔥 Priorité haute</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" style="width:31%;background:#ef4444">4</div></div>
+          <div class="funnel-count" style="color:#ef4444">4</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">📞 Contactés</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" id="fn-contact" style="width:0%;background:#f97316">0</div></div>
+          <div class="funnel-count" id="fn-contact-v" style="color:#f97316">0</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">💬 En discussion</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" style="width:0%;background:#fbbf24">0</div></div>
+          <div class="funnel-count" style="color:#fbbf24">0</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">📄 Devis envoyé</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" style="width:8%;background:#a78bfa">1</div></div>
+          <div class="funnel-count" style="color:#a78bfa">1</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">✅ Clients actifs</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" id="fn-clients" style="width:8%;background:#4ade80">1</div></div>
+          <div class="funnel-count" id="fn-clients-v" style="color:#4ade80">1</div>
+        </div>
+        <div class="funnel-step">
+          <div class="funnel-label">💰 Payées</div>
+          <div class="funnel-bar-wrap"><div class="funnel-fill" id="fn-pay" style="width:0%;background:#86efac">0</div></div>
+          <div class="funnel-count" id="fn-pay-v" style="color:#86efac">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions rapides + notes -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="vg-card">
+        <h3>⚡ Actions rapides</h3>
+        <div class="qs-grid">
+          <button class="qs-btn" onclick="showTab('devis')"><span class="qi">📄</span><span class="ql">Nouveau devis</span></button>
+          <button class="qs-btn" onclick="showTab('commandes')"><span class="qi">📦</span><span class="ql">Nouvelle commande</span></button>
+          <button class="qs-btn" onclick="showTab('fin')"><span class="qi">💰</span><span class="ql">Ajouter recette</span></button>
+          <button class="qs-btn" onclick="showTab('taches')"><span class="qi">✅</span><span class="ql">Ajouter tâche</span></button>
+          <button class="qs-btn" onclick="showTab('prosp')"><span class="qi">📣</span><span class="ql">Prospecter</span></button>
+          <button class="qs-btn" onclick="showTab('stats')"><span class="qi">📊</span><span class="ql">Statistiques</span></button>
+        </div>
+      </div>
+      <div class="vg-card" style="flex:1">
+        <h3>📝 Note rapide</h3>
+        <textarea class="notes-area" id="vg-note" placeholder="Écrivez une note rapide…"></textarea>
+        <button class="save-note-btn" onclick="saveNote()">💾 Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row -->
+  <div class="vg-bot">
+    <!-- Tâches du jour -->
+    <div class="vg-card">
+      <h3>📋 Tâches urgentes & en cours</h3>
+      <div id="vg-tasks-list"><div style="text-align:center;color:#475569;font-size:11px;padding:12px">Aucune tâche urgente</div></div>
+    </div>
+    <!-- Activité récente -->
+    <div class="vg-card">
+      <h3>🕐 Activité récente</h3>
+      <div class="activity-feed" id="activity-feed">
+        <div class="act-item act-blue"><div class="act-ic">🚀</div><div class="act-body"><div class="act-txt">DB7 Groupe — Tableau de bord initialisé</div><div class="act-time">Aujourd'hui</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ TAB 1 — CRM ══════════ -->
+<div class="panel" id="tab-dashboard">
+<div class="db">
+  <div class="sg" id="dash-stats">
+    <div class="sc c-or"><div class="sl">Total Prospects</div><div class="sv">13</div><div class="ss">dans le CRM</div></div>
+    <div class="sc c-rd"><div class="sl">🔥 Priorité Haute</div><div class="sv">4</div><div class="ss">à contacter en priorité</div></div>
+    <div class="sc c-yw"><div class="sl">⚡ Priorité Moyenne</div><div class="sv">7</div><div class="ss">relances planifiées</div></div>
+    <div class="sc c-gr"><div class="sl">💶 CA Devis</div><div class="sv" id="dash-ca">249 €</div><div class="ss" id="dash-ca-sub">1 devis envoyé</div></div>
+    <div class="sc c-bl"><div class="sl">💰 CA Facturé</div><div class="sv" id="dash-fac">0 €</div><div class="ss">livre des recettes</div></div>
+  </div>
+  <div class="dg">
+    <div class="ds">
+      <div class="dsh"><h2>🗺️ Carte des Prospects — Zone Vesoul</h2><span>Clic sur un marqueur</span></div>
+      <div id="map"></div>
+      <div class="mleg">
+        <div class="mli"><div class="mld" style="background:#ef4444"></div>À contacter</div>
+        <div class="mli"><div class="mld" style="background:#f97316"></div>Contacté</div>
+        <div class="mli"><div class="mld" style="background:#fbbf24"></div>En discussion</div>
+        <div class="mli"><div class="mld" style="background:#4ade80"></div>Client actif</div>
+        <div class="mli"><div class="mld" style="background:#1d4ed8;border:2px solid #f97316"></div>DB7 Siège</div>
+      </div>
+    </div>
+    <div class="dsb">
+      <div class="dflt">
+        <h3>🔍 Filtres</h3>
+        <div class="dfg"><label>Recherche</label><input type="text" id="d-search" placeholder="Nom…" oninput="filterClients()"></div>
+        <div class="dfg"><label>Statut</label>
+          <select id="d-fstatut" onchange="filterClients()"><option value="">Tous</option><option>À contacter</option><option>Contacté</option><option>En discussion</option><option>Client</option></select></div>
+        <div class="dfg"><label>Secteur</label>
+          <select id="d-fsecteur" onchange="filterClients()"><option value="">Tous</option><option>Événementiel</option><option>Immobilier</option><option>Industrie</option><option>Santé</option><option>BTP</option><option>Automobile</option><option>Restauration/Hôtellerie</option><option>Commerce/Retail</option></select></div>
+        <div class="dfg"><label>Priorité</label>
+          <select id="d-fprio" onchange="filterClients()"><option value="">Toutes</option><option value="🔥 Haute">🔥 Haute</option><option value="⚡ Moyenne">⚡ Moyenne</option><option value="🌱 Basse">🌱 Basse</option></select></div>
+        <button class="dreset" onclick="resetFilters()">↺ Réinitialiser</button>
+      </div>
+      <div class="dlw">
+        <div class="dsh"><h2>📋 Prospects <span id="list-count">(13)</span></h2></div>
+        <div class="dscr" id="d-client-list"></div>
+      </div>
+      <div class="ddet" id="d-detail">
+        <h3 id="dd-name">—</h3>
+        <div class="ddr"><span class="dk">Secteur</span><span class="dv" id="dd-sect">—</span></div>
+        <div class="ddr"><span class="dk">Ville</span><span class="dv" id="dd-ville">—</span></div>
+        <div class="ddr"><span class="dk">Statut</span><span class="dv" id="dd-stat">—</span></div>
+        <div class="ddr"><span class="dk">Priorité</span><span class="dv" id="dd-prio">—</span></div>
+        <div class="ddr"><span class="dk">Tél.</span><span class="dv" id="dd-tel">—</span></div>
+        <div class="dbox"><strong>💡 Besoins</strong><span id="dd-besoins">—</span></div>
+        <div class="dbox" style="margin-top:4px"><strong>📝 Notes</strong><span id="dd-notes">—</span></div>
+        <button style="margin-top:8px;width:100%;padding:6px;background:#1e3a5f;color:#60a5fa;border:none;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer" onclick="showTab('prosp')">📣 Aller à la prospection →</button>
+      </div>
+    </div>
+  </div>
+  <div class="dpg">
+    <div class="dpc">
+      <h3>📊 Répartition par Secteur</h3>
+      <div class="dpi"><div class="dpi-l"><span>Événementiel</span><span>2</span></div><div class="dpb"><div class="dpf" style="width:15%;background:#38bdf8"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Immobilier</span><span>2</span></div><div class="dpb"><div class="dpf" style="width:15%;background:#a78bfa"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>BTP</span><span>2</span></div><div class="dpb"><div class="dpf" style="width:15%;background:#f97316"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Restauration/Hôtellerie</span><span>2</span></div><div class="dpb"><div class="dpf" style="width:15%;background:#fb923c"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Commerce/Retail</span><span>2</span></div><div class="dpb"><div class="dpf" style="width:15%;background:#4ade80"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Automobile</span><span>1</span></div><div class="dpb"><div class="dpf" style="width:7.5%;background:#f43f5e"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Industrie</span><span>1</span></div><div class="dpb"><div class="dpf" style="width:7.5%;background:#fbbf24"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Santé</span><span>1</span></div><div class="dpb"><div class="dpf" style="width:7.5%;background:#34d399"></div></div></div>
+    </div>
+    <div class="dpc">
+      <h3>🎯 Pipeline Commercial</h3>
+      <div class="dpi"><div class="dpi-l"><span>À contacter</span><span>12</span></div><div class="dpb"><div class="dpf" style="width:92%;background:#ef4444"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Devis envoyé</span><span>1</span></div><div class="dpb"><div class="dpf" style="width:8%;background:#fbbf24"></div></div></div>
+      <div class="dpi"><div class="dpi-l"><span>Client actif</span><span id="pipe-clients">1</span></div><div class="dpb"><div class="dpf" id="pipe-fill-clients" style="width:8%;background:#4ade80"></div></div></div>
+      <div class="dpib">
+        <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">CA Potentiel estimé</div>
+        <div style="font-size:22px;font-weight:800;color:var(--orange)">~15 000 €</div>
+        <div style="font-size:9px;color:#64748b;margin-top:2px">si 25% prospects convertis × panier 500€</div>
+      </div>
+    </div>
+  </div>
+  <h2 style="color:var(--bright);font-size:12px;margin-bottom:8px">📑 Tableau complet</h2>
+  <table class="dtbl"><thead><tr><th>#</th><th>Entreprise</th><th>Secteur</th><th>Ville</th><th>Statut</th><th>Priorité</th><th>Tél.</th><th>Besoins principaux</th></tr></thead>
+  <tbody id="d-table-body"></tbody></table>
+</div>
+</div>
+<!-- ══════════ TAB 2 — CALCULATEUR ══════════ -->
+<div class="panel" id="tab-calc">
+<div class="cb">
+<div class="g2">
+  <div>
+    <div class="card">
+      <div class="ct">📐 Format du produit</div>
+      <div class="fmt-grid">
+        <div class="fmt-btn active" id="btn-petit" onclick="selectFormat('petit')"><span class="fm" id="badge-petit">62%</span><span class="fi">📄</span><div class="fn">Imprimerie</div><div class="fe">Flyers, cartes, brochures, affiches, stickers</div></div>
+        <div class="fmt-btn" id="btn-signa" onclick="selectFormat('signa')"><span class="fm" id="badge-signa">58%</span><span class="fi">🪧</span><div class="fn">Signalétique</div><div class="fe">Roll-up, panneau, enseigne, PLV</div></div>
+        <div class="fmt-btn" id="btn-grand" onclick="selectFormat('grand')"><span class="fm" id="badge-grand">54%</span><span class="fi">🏗️</span><div class="fn">Grand Format</div><div class="fe">Bâches, banderoles, drapeaux</div></div>
+        <div class="fmt-btn" id="btn-textile" onclick="selectFormat('textile')"><span class="fm" id="badge-textile">55%</span><span class="fi">👕</span><div class="fn">Textile</div><div class="fe">T-shirts, polos, sweats, sacs</div></div>
+        <div class="fmt-btn" id="btn-goodies" onclick="selectFormat('goodies')"><span class="fm" id="badge-goodies">52%</span><span class="fi">🎁</span><div class="fn">Goodies</div><div class="fe">Mugs, stylos, badges, clés USB</div></div>
+      </div>
+      <div class="fi2" id="fmt-info"><strong>Imprimerie :</strong> Marge recommandée <strong>62%</strong> — coefficient ×2,63.</div>
+    </div>
+    <div class="card">
+      <div class="ct">💶 Prix & Marge</div>
+      <div class="ig"><label>Nom du produit (optionnel)</label><input type="text" id="c-name" placeholder="ex. Flyers A5 5000ex…"></div>
+      <div class="ig"><label>Prix fournisseur</label><div class="pw"><span class="eu">€</span><input type="number" id="c-cost" placeholder="0,00" min="0" step="0.01" oninput="calculate()"></div></div>
+      <div class="ig">
+        <label>Marge — <span id="c-marg-lbl" style="color:var(--blue);font-weight:800">62%</span></label>
+        <div class="sr"><input type="range" id="c-slider" min="30" max="80" value="62" oninput="onSlider()"><div class="sv2" id="c-slider-val">62%</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">💰 Prix de vente DB7</div>
+      <div class="rm"><div class="rl">PRIX DE VENTE NET</div><div class="rp" id="c-sell">—<span> €</span></div><div class="rs">Sans TVA — micro-entreprise</div></div>
+      <div class="rg3">
+        <div class="rb"><div class="rl2">Coût fournisseur</div><div class="rv" id="c-rcost">— €</div></div>
+        <div class="rb g"><div class="rl2">Bénéfice net</div><div class="rv" id="c-rprofit">— €</div></div>
+        <div class="rb o"><div class="rl2">Coefficient</div><div class="rv" id="c-rcoef">—x</div></div>
+      </div>
+      <div class="bw"><div class="bl2"><span>Coût</span><span>Marge</span></div><div class="bb"><div class="bc" id="c-bar-cost" style="width:38%"></div><div class="bm" id="c-bar-marge" style="width:62%"></div></div><div class="bleg"><span><span class="bld" style="background:#1A2E4A"></span>Coût</span><span><span class="bld" style="background:#1E7A45"></span>Marge</span></div></div>
+      <button class="btn btn-add" onclick="addToList()">➕ Ajouter à la liste devis</button>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="ct">📦 Catalogue produits DB7</div>
+      <p style="font-size:.73rem;color:var(--muted);margin-bottom:8px">Cliquez sur un produit pour pré-remplir le calculateur</p>
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>
+  </div>
+  <div class="gf">
+    <div class="card">
+      <div class="ct" style="justify-content:space-between"><span>📋 Liste produits du devis</span><span id="c-count" style="font-size:.73rem;color:var(--muted);font-weight:400">0 produit</span></div>
+      <div id="c-list"><div class="hem">Aucun produit encore.</div></div>
+      <div id="c-summary" style="display:none">
+        <div class="smg" style="margin-top:9px">
+          <div class="sb bl"><div class="sl">Coût total fournisseur</div><div class="sv" id="s-cout">0 €</div></div>
+          <div class="sb ac"><div class="sl">Bénéfice net total</div><div class="sv" id="s-ben">0 €</div></div>
+          <div class="sb"><div class="sl">Marge moyenne</div><div class="sv" id="s-marg">—</div></div>
+        </div>
+        <div class="tb"><div class="tl">TOTAL À FACTURER</div><div class="tv" id="s-total">0 €</div></div>
+        <div style="display:flex;gap:7px;margin-top:8px">
+          <button class="btn btn-pri" style="flex:2" onclick="showTab('devis');prefillDevis()">📄 Créer le devis →</button>
+          <button class="btn btn-out" style="flex:1" onclick="clearList()">🗑️ Vider</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ══════════ TAB 3 — DEVIS ══════════ -->
+<div class="panel" id="tab-devis">
+<div class="cb">
+<div class="g2">
+  <div>
+    <div class="card">
+      <div class="ct">🏢 Informations client</div>
+      <div class="ig"><label>Nom de l'entreprise *</label><input type="text" id="dv-company" placeholder="ex. Boulangerie Dupont"></div>
+      <div class="ig"><label>Contact (optionnel)</label><input type="text" id="dv-contact" placeholder="ex. M. Jean Dupont"></div>
+      <div class="ig"><label>Email client *</label><input type="email" id="dv-email" placeholder="contact@entreprise.fr"></div>
+      <div class="ig"><label>Téléphone</label><input type="tel" id="dv-tel" placeholder="06 00 00 00 00"></div>
+      <div class="ig"><label>Adresse</label><input type="text" id="dv-adr" placeholder="14 rue du Marché"></div>
+      <div class="ig"><label>Ville</label><input type="text" id="dv-ville" placeholder="ex. Vesoul"></div>
+      <div class="ig"><label>Notes pour le client</label><textarea id="dv-notes" placeholder="ex. Livraison directe sous 5-7 jours ouvrés."></textarea></div>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="ct">📦 Produits du devis</div>
+      <div id="dv-products-display"><div class="hem">Ajoute des produits depuis le Calculateur ou manuellement.</div></div>
+      <div style="margin-top:8px">
+        <div class="ig"><label>Ajouter manuellement</label><input type="text" id="dv-pname" placeholder="Description du produit"></div>
+        <div class="g2">
+          <div class="ig"><label>Format</label><select id="dv-pfmt"><option value="petit">📄 Imprimerie (62%)</option><option value="signa" selected>🪧 Signalétique (58%)</option><option value="grand">🏗️ Grand Format (54%)</option><option value="textile">👕 Textile (55%)</option><option value="goodies">🎁 Goodies (52%)</option></select></div>
+          <div class="ig"><label>Coût fournisseur</label><div class="pw"><span class="eu">€</span><input type="number" id="dv-pcost" placeholder="0,00" step="0.01" style="padding-left:25px"></div></div>
+        </div>
+        <button class="btn btn-add" onclick="addProductToDevis()">➕ Ajouter ce produit</button>
+      </div>
+    </div>
+    <div class="card" id="dv-total-card" style="display:none">
+      <div class="ct">💰 Récapitulatif</div>
+      <div class="tb"><div class="tl">TOTAL DEVIS</div><div class="tv" id="dv-total">0 €</div><div style="font-size:.68rem;opacity:.6;margin-top:2px">Sans TVA</div></div>
+    </div>
+    <div class="card">
+      <div class="ct">⚡ Générer la commande Claude</div>
+      <div class="ig"><label>Délai de relance</label><select id="dv-relance"><option value="3">3 jours</option><option value="5" selected>5 jours</option><option value="7">7 jours</option><option value="14">14 jours</option></select></div>
+      <button class="btn btn-suc" onclick="generateCommand()" style="margin-bottom:7px">⚡ Générer la commande pour Claude</button>
+      <div id="dv-cmd-out" style="display:none">
+        <div class="cmdb" id="dv-cmd-text" onclick="copyCmd()"></div>
+        <div style="font-size:.68rem;color:var(--muted);margin-top:3px;text-align:right" id="dv-copy-hint">📋 Clique pour copier</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">📦 → Créer une commande</div>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:9px">Une fois le devis accepté, enregistrez-le comme commande active.</p>
+      <button class="btn btn-pri" onclick="devisToCommande()">📦 Convertir en commande active</button>
+    </div>
+  </div>
+  <div class="gf">
+    <div class="card">
+      <div class="ct">✉️ Templates emails professionnels</div>
+      <p style="font-size:.73rem;color:var(--muted);margin-bottom:9px">Sélectionne un modèle — il se personnalise automatiquement. Cliquez pour copier.</p>
+      <div class="tpl-tabs" id="tpl-tabs"></div>
+      <div class="tpl-body" id="tpl-body" onclick="copyTpl()">← Sélectionne un modèle d'email ci-dessus</div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:3px;text-align:right" id="tpl-copy-hint">📋 Cliquez pour copier</div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ══════════ TAB 4 — COMMANDES ══════════ -->
+<div class="panel" id="tab-commandes">
+<div class="cmd-body">
+  <div class="cmd-kpis">
+    <div class="sc c-bl"><div class="sl">📋 Devis accepté</div><div class="sv" id="cmd-k1">0</div><div class="ss">en attente prod.</div></div>
+    <div class="sc c-pu"><div class="sl">🏭 En production</div><div class="sv" id="cmd-k2">0</div><div class="ss">chez fournisseur</div></div>
+    <div class="sc c-yw"><div class="sl">🚚 Expédié</div><div class="sv" id="cmd-k3">0</div><div class="ss">en transit</div></div>
+    <div class="sc c-te"><div class="sl">📬 Livré</div><div class="sv" id="cmd-k4">0</div><div class="ss">à facturer</div></div>
+    <div class="sc c-gr"><div class="sl">🧾 Facturé</div><div class="sv" id="cmd-k5">0</div><div class="ss">en attente paiement</div></div>
+    <div class="sc c-or"><div class="sl">✅ Payé</div><div class="sv" id="cmd-k6">0</div><div class="ss">encaissé</div></div>
+  </div>
+
+  <div class="cmd-grid">
+    <div class="cmd-form">
+      <h3>➕ Nouvelle commande</h3>
+      <div class="cmd-ig"><label>Client / Entreprise *</label><input type="text" id="cmd-client" placeholder="ex. Boulangerie Dupont"></div>
+      <div class="cmd-ig"><label>Description produits *</label><textarea id="cmd-desc" placeholder="ex. Flyers A5 × 500 + Roll-up 85cm"></textarea></div>
+      <div class="cmd-ig"><label>Montant (€) *</label><input type="number" id="cmd-montant" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="cmd-ig"><label>Date commande</label><input type="date" id="cmd-date"></div>
+      <div class="cmd-ig"><label>Date livraison prévue</label><input type="date" id="cmd-livdate"></div>
+      <div class="cmd-ig"><label>N° Devis / Référence</label><input type="text" id="cmd-ref" placeholder="ex. DB7-002"></div>
+      <div class="cmd-ig"><label>Statut</label>
+        <select id="cmd-statut">
+          <option value="Devis accepté">📋 Devis accepté</option>
+          <option value="En production">🏭 En production</option>
+          <option value="Expédié">🚚 Expédié</option>
+          <option value="Livré">📬 Livré</option>
+          <option value="Facturé">🧾 Facturé</option>
+          <option value="Payé">✅ Payé</option>
+        </select></div>
+      <div class="cmd-ig"><label>Notes</label><textarea id="cmd-notes" placeholder="Informations complémentaires…"></textarea></div>
+      <button class="btn-cmd" onclick="addCommande()">📦 Enregistrer la commande</button>
+    </div>
+
+    <div>
+      <div class="pipeline-wrap" style="margin-bottom:12px">
+        <h3>🔄 Pipeline des commandes</h3>
+        <div class="pipeline-cols" id="pipeline-cols"></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h2 style="color:var(--bright);font-size:12px">📋 Toutes les commandes</h2>
+          <select id="cmd-filter" onchange="renderCommandes()" style="background:#1e293b;border:1px solid var(--border);color:var(--bright);padding:5px 9px;border-radius:7px;font-size:10.5px;outline:none">
+            <option value="">Tous statuts</option>
+            <option>Devis accepté</option><option>En production</option><option>Expédié</option><option>Livré</option><option>Facturé</option><option>Payé</option>
+          </select>
+        </div>
+        <table class="cmd-table"><thead><tr><th>#</th><th>Client</th><th>Description</th><th>Montant</th><th>Statut</th><th>Livraison</th><th>Action</th></tr></thead>
+        <tbody id="cmd-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- ══════════ TAB 5 — PROSPECTION ══════════ -->
+<div class="panel" id="tab-prosp">
+<div class="prosp-body">
+  <div class="prosp-kpis">
+    <div class="sc c-rd"><div class="sl">🔥 À contacter</div><div class="sv" id="p-count-a">12</div><div class="ss">prospects en attente</div></div>
+    <div class="sc c-yw"><div class="sl">📞 Contactés ce mois</div><div class="sv" id="p-count-c">0</div><div class="ss">actions enregistrées</div></div>
+    <div class="sc c-gr"><div class="sl">✅ Clients actifs</div><div class="sv" id="p-count-conv">1</div><div class="ss">convertis</div></div>
+    <div class="sc c-bl"><div class="sl">📅 Taux de conversion</div><div class="sv" id="p-taux">7.7%</div><div class="ss">1 sur 13</div></div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+    <h2 style="color:var(--bright);font-size:13px">📋 Liste de prospection priorisée</h2>
+    <div style="display:flex;gap:7px">
+      <select id="p-fsect" onchange="renderProspList()" style="background:#1e293b;border:1px solid var(--border);color:var(--bright);padding:5px 9px;border-radius:7px;font-size:10.5px;outline:none">
+        <option value="">Tous secteurs</option>
+        <option>Événementiel</option><option>Immobilier</option><option>Industrie</option><option>Santé</option><option>BTP</option><option>Automobile</option><option>Restauration/Hôtellerie</option><option>Commerce/Retail</option>
+      </select>
+      <select id="p-fprio" onchange="renderProspList()" style="background:#1e293b;border:1px solid var(--border);color:var(--bright);padding:5px 9px;border-radius:7px;font-size:10.5px;outline:none">
+        <option value="">Toutes priorités</option><option value="🔥 Haute">🔥 Haute</option><option value="⚡ Moyenne">⚡ Moyenne</option><option value="🌱 Basse">🌱 Basse</option>
+      </select>
+    </div>
+  </div>
+  <div class="prosp-list" id="prosp-list"></div>
+</div>
+</div>
+
+<!-- ══════════ TAB 6 — FINANCES ══════════ -->
+<div class="panel" id="tab-fin">
+<div class="fin-body">
+  <div class="fin-kpis" id="fin-kpis">
+    <div class="sc c-gr"><div class="sl">💶 CA Total</div><div class="sv" id="fin-ca-tot">0 €</div><div class="ss">recettes encaissées</div></div>
+    <div class="sc c-or"><div class="sl">📅 CA ce mois</div><div class="sv" id="fin-ca-mois">0 €</div><div class="ss" id="fin-mois-lbl">—</div></div>
+    <div class="sc c-yw"><div class="sl">💸 Dépenses</div><div class="sv" id="fin-dep-tot">0 €</div><div class="ss">charges totales</div></div>
+    <div class="sc c-te"><div class="sl">📈 Bénéfice net</div><div class="sv" id="fin-ben">0 €</div><div class="ss">recettes − dépenses</div></div>
+    <div class="sc c-bl"><div class="sl">🔴 Plafond restant</div><div class="sv" id="fin-reste">77 700 €</div><div class="ss">micro 2026</div></div>
+  </div>
+
+  <div style="margin-bottom:12px">
+    <div class="fin-tabs">
+      <button class="fin-tab active" onclick="switchFinTab('recettes')">💶 Recettes</button>
+      <button class="fin-tab" onclick="switchFinTab('depenses')">💸 Dépenses</button>
+      <button class="fin-tab" onclick="switchFinTab('bilan')">📊 Bilan</button>
+    </div>
+  </div>
+
+  <!-- RECETTES -->
+  <div id="fin-panel-recettes">
+    <div class="fin-grid">
+      <div>
+        <div class="fin-form">
+          <h3>➕ Ajouter une recette</h3>
+          <div class="fin-ig"><label>Date</label><input type="date" id="fin-date"></div>
+          <div class="fin-ig"><label>Client / Entreprise</label><input type="text" id="fin-client" placeholder="ex. Boulangerie Dupont"></div>
+          <div class="fin-ig"><label>N° Facture</label><input type="text" id="fin-fac" placeholder="ex. FAC-001"></div>
+          <div class="fin-ig"><label>Description</label><input type="text" id="fin-desc" placeholder="ex. Flyers A5 + Roll-up"></div>
+          <div class="fin-ig"><label>Montant encaissé (€)</label><input type="number" id="fin-montant" placeholder="0.00" step="0.01" min="0"></div>
+          <button class="btn-fin" onclick="addRecette()">✅ Enregistrer la recette</button>
+        </div>
+        <div class="fin-form" style="margin-top:12px">
+          <h3>📊 CA mensuel 2026</h3>
+          <div class="bar-months" id="bar-months"></div>
+        </div>
+      </div>
+      <div class="plafond-card">
+        <h3>🎯 Plafond Micro 2026</h3>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:5px">
+          <span id="pla-ca">CA : 0 €</span><span>Plafond : 77 700 €</span>
+        </div>
+        <div class="pla-bar"><div class="pla-fill" id="pla-fill" style="width:0%"></div></div>
+        <div style="text-align:right;font-size:10px;color:#64748b;margin-top:3px"><span id="pla-pct">0%</span> atteint</div>
+        <div id="pla-alert" style="display:none;margin-top:7px;background:#431407;border:1px solid var(--orange);border-radius:7px;padding:8px;font-size:10.5px;color:var(--orange)"></div>
+        <div class="urssaf-box">
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">📅 Déclarations URSSAF 2026</div>
+          <div id="urssaf-list" style="display:flex;flex-direction:column;gap:5px"></div>
+          <div style="font-size:9px;color:#64748b;margin-top:8px">Taux : Vente marchandises 12,3% · Prestations 21,2%</div>
+        </div>
+        <div style="margin-top:11px;background:#0f172a;border-radius:8px;padding:10px">
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">📋 Rappels légaux</div>
+          <div style="font-size:10px;color:#94a3b8;line-height:1.7">
+            ✅ Conserver toutes les factures 10 ans<br>
+            ✅ Livre des recettes obligatoire<br>
+            ✅ Déclarer à zéro si aucune recette<br>
+            ✅ Pas de TVA sous plafond (art. 293 B)<br>
+            ✅ Assurance RC Pro recommandée
+          </div>
+        </div>
+      </div>
+    </div>
+    <h2 style="color:var(--bright);font-size:12px;margin-bottom:8px">📒 Livre des recettes</h2>
+    <table class="fin-table" id="fin-table">
+      <thead><tr><th>#</th><th>Date</th><th>Client</th><th>N° Facture</th><th>Description</th><th>Montant HT</th><th></th></tr></thead>
+      <tbody id="fin-tbody"></tbody>
+    </table>
+    <div style="margin-top:7px;display:flex;gap:7px">
+      <button onclick="exportCSV()" style="background:#334155;color:#94a3b8;border:none;padding:6px 12px;border-radius:7px;font-size:10.5px;cursor:pointer">⬇️ Exporter CSV</button>
+      <button onclick="if(confirm('Effacer toutes les recettes ?'))clearRecettes()" style="background:#1f1f1f;color:#ef4444;border:none;padding:6px 12px;border-radius:7px;font-size:10.5px;cursor:pointer">🗑️ Tout effacer</button>
+    </div>
+  </div>
+
+  <!-- DÉPENSES -->
+  <div id="fin-panel-depenses" style="display:none">
+    <div class="fin-grid">
+      <div class="fin-form">
+        <h3>➕ Ajouter une dépense</h3>
+        <div class="fin-ig"><label>Date</label><input type="date" id="dep-date"></div>
+        <div class="fin-ig"><label>Fournisseur / Libellé</label><input type="text" id="dep-label" placeholder="ex. Fournisseur Orléans"></div>
+        <div class="fin-ig"><label>Catégorie</label>
+          <select id="dep-cat">
+            <option value="Achat fournisseur">🛒 Achat fournisseur</option>
+            <option value="Frais de port">🚚 Frais de port</option>
+            <option value="Cotisations URSSAF">🏛️ Cotisations URSSAF</option>
+            <option value="Assurance">🛡️ Assurance RC Pro</option>
+            <option value="Carburant">⛽ Carburant / Déplacement</option>
+            <option value="Logiciels">💻 Logiciels / Abonnements</option>
+            <option value="Matériel">🔧 Matériel / Bureau</option>
+            <option value="Autre">📦 Autre</option>
+          </select></div>
+        <div class="fin-ig"><label>Montant (€)</label><input type="number" id="dep-montant" placeholder="0.00" step="0.01" min="0"></div>
+        <div class="fin-ig"><label>Note</label><input type="text" id="dep-note" placeholder="Détail optionnel"></div>
+        <button class="btn-fin btn-fin-dep" onclick="addDepense()">💸 Enregistrer la dépense</button>
+      </div>
+      <div>
+        <div style="background:var(--card);border-radius:11px;border:1px solid var(--border);padding:14px;margin-bottom:12px">
+          <h3 style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:10px">📊 Dépenses par catégorie</h3>
+          <div id="dep-by-cat"></div>
+        </div>
+      </div>
+    </div>
+    <h2 style="color:var(--bright);font-size:12px;margin-bottom:8px">📋 Journal des dépenses</h2>
+    <table class="fin-table">
+      <thead><tr><th>#</th><th>Date</th><th>Fournisseur</th><th>Catégorie</th><th>Note</th><th>Montant</th><th></th></tr></thead>
+      <tbody id="dep-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- BILAN -->
+  <div id="fin-panel-bilan" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div style="background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px">
+        <h3 style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px">💶 Bilan général</h3>
+        <div class="fin-bilanrow"><span class="fb-l">CA Total encaissé</span><span class="fb-v" id="bil-ca" style="color:#4ade80">0 €</span></div>
+        <div class="fin-bilanrow"><span class="fb-l">Total dépenses</span><span class="fb-v" id="bil-dep" style="color:#ef4444">0 €</span></div>
+        <div class="fin-bilanrow" style="border-top:2px solid var(--border);margin-top:6px;padding-top:8px"><span class="fb-l" style="font-weight:700;color:var(--bright)">Résultat net</span><span class="fb-v" id="bil-net" style="font-size:18px;color:var(--orange)">0 €</span></div>
+        <div class="fin-bilanrow"><span class="fb-l">Marge nette</span><span class="fb-v" id="bil-marg" style="color:#38bdf8">—</span></div>
+        <div class="fin-bilanrow"><span class="fb-l">URSSAF estimé (12.3%)</span><span class="fb-v" id="bil-urssaf" style="color:#fbbf24">0 €</span></div>
+        <div class="fin-bilanrow"><span class="fb-l">Résultat après charges</span><span class="fb-v" id="bil-apres" style="color:#a78bfa">0 €</span></div>
+      </div>
+      <div style="background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px">
+        <h3 style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px">📅 Bilan mensuel <span id="bil-mois-lbl" style="color:#64748b;font-weight:400"></span></h3>
+        <div id="bil-mensuel"></div>
+      </div>
+      <div style="background:var(--card);border-radius:11px;border:1px solid var(--border);padding:15px">
+        <h3 style="font-size:12px;font-weight:700;color:var(--bright);margin-bottom:11px">📈 Projection annuelle</h3>
+        <div id="bil-projection"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ TAB 7 — TÂCHES ══════════ -->
+<div class="panel" id="tab-taches">
+<div class="tsk-body">
+  <div class="tsk-kpis">
+    <div class="sc c-rd"><div class="sl">🔴 Urgentes</div><div class="sv" id="tsk-k1">0</div><div class="ss">à traiter maintenant</div></div>
+    <div class="sc c-yw"><div class="sl">⏳ En cours</div><div class="sv" id="tsk-k2">0</div><div class="ss">en progression</div></div>
+    <div class="sc c-bl"><div class="sl">📋 À faire</div><div class="sv" id="tsk-k3">0</div><div class="ss">planifiées</div></div>
+    <div class="sc c-gr"><div class="sl">✅ Terminées</div><div class="sv" id="tsk-k4">0</div><div class="ss">ce mois</div></div>
+  </div>
+  <div class="tsk-grid">
+    <div class="tsk-form">
+      <h3>➕ Nouvelle tâche</h3>
+      <div class="tsk-ig"><label>Titre *</label><input type="text" id="tsk-titre" placeholder="ex. Appeler Parc Expo 70"></div>
+      <div class="tsk-ig"><label>Catégorie</label>
+        <select id="tsk-cat">
+          <option value="Prospection">📣 Prospection</option>
+          <option value="Devis">📄 Devis</option>
+          <option value="Livraison">🚚 Livraison</option>
+          <option value="Finance">💰 Finance</option>
+          <option value="Admin">📋 Admin</option>
+          <option value="Autre">📦 Autre</option>
+        </select></div>
+      <div class="tsk-ig"><label>Priorité</label>
+        <select id="tsk-prio">
+          <option value="Urgente">🔴 Urgente</option>
+          <option value="Normale" selected>🟡 Normale</option>
+          <option value="Basse">⚪ Basse</option>
+        </select></div>
+      <div class="tsk-ig"><label>Échéance</label><input type="date" id="tsk-ech"></div>
+      <div class="tsk-ig"><label>Lié à (client/prospect)</label><input type="text" id="tsk-link" placeholder="ex. Parc Expo 70"></div>
+      <button class="btn-tsk" onclick="addTache()">✅ Créer la tâche</button>
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--bright);margin-bottom:8px">🔄 Tâches suggérées</div>
+        <div style="display:flex;flex-direction:column;gap:5px" id="tsk-suggestions">
+          <div style="background:#0f172a;border-radius:7px;padding:7px 9px;font-size:10px;color:#94a3b8;cursor:pointer;border:1px solid var(--border)" onclick="quickTask('Contacter Parc Expo 70','Prospection','Urgente')">📣 Contacter Parc Expo 70</div>
+          <div style="background:#0f172a;border-radius:7px;padding:7px 9px;font-size:10px;color:#94a3b8;cursor:pointer;border:1px solid var(--border)" onclick="quickTask('Relancer devis DB7-001 Boulangerie Dupont','Devis','Urgente')">📄 Relancer devis DB7-001</div>
+          <div style="background:#0f172a;border-radius:7px;padding:7px 9px;font-size:10px;color:#94a3b8;cursor:pointer;border:1px solid var(--border)" onclick="quickTask('Déclarer URSSAF Q1 2026','Finance','Normale')">🏛️ Déclaration URSSAF Q1</div>
+          <div style="background:#0f172a;border-radius:7px;padding:7px 9px;font-size:10px;color:#94a3b8;cursor:pointer;border:1px solid var(--border)" onclick="quickTask('Prospecter concessionnaires Vesoul','Prospection','Urgente')">🚗 Prospecter concessionnaires</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="display:flex;gap:7px;margin-bottom:10px">
+        <select id="tsk-filter-cat" onchange="renderTaches()" style="background:#1e293b;border:1px solid var(--border);color:var(--bright);padding:5px 9px;border-radius:7px;font-size:10.5px;outline:none">
+          <option value="">Toutes catégories</option>
+          <option>Prospection</option><option>Devis</option><option>Livraison</option><option>Finance</option><option>Admin</option><option>Autre</option>
+        </select>
+        <select id="tsk-filter-prio" onchange="renderTaches()" style="background:#1e293b;border:1px solid var(--border);color:var(--bright);padding:5px 9px;border-radius:7px;font-size:10.5px;outline:none">
+          <option value="">Toutes priorités</option>
+          <option>Urgente</option><option>Normale</option><option>Basse</option>
+        </select>
+        <button onclick="clearDoneTaches()" style="background:#334155;color:#94a3b8;border:none;padding:5px 11px;border-radius:7px;font-size:10.5px;cursor:pointer;margin-left:auto">🗑️ Effacer terminées</button>
+      </div>
+      <div class="tsk-cols" id="tsk-cols">
+        <div class="tsk-col">
+          <div class="tsk-col-hd" style="background:#1f1f1f;color:#ef4444">🔴 À faire <span id="tsk-col1-count" style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:10px;font-size:9px">0</span></div>
+          <div id="tsk-col-afaire"></div>
+        </div>
+        <div class="tsk-col">
+          <div class="tsk-col-hd" style="background:#1e1b4b;color:var(--purple)">⏳ En cours <span id="tsk-col2-count" style="background:var(--purple);color:#fff;padding:1px 6px;border-radius:10px;font-size:9px">0</span></div>
+          <div id="tsk-col-encours"></div>
+        </div>
+        <div class="tsk-col">
+          <div class="tsk-col-hd" style="background:#052e16;color:#4ade80">✅ Terminées <span id="tsk-col3-count" style="background:#4ade80;color:#052e16;padding:1px 6px;border-radius:10px;font-size:9px">0</span></div>
+          <div id="tsk-col-termine"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- ══════════ TAB 8 — STATISTIQUES ══════════ -->
+<div class="panel" id="tab-stats">
+<div class="stat-body">
+  <div class="stat-kpis">
+    <div class="sc c-or"><div class="sl">📈 CA projeté (12 mois)</div><div class="sv" id="stat-proj">—</div><div class="ss">si tendance maintenue</div></div>
+    <div class="sc c-gr"><div class="sl">💹 Meilleur mois</div><div class="sv" id="stat-best">—</div><div class="ss" id="stat-best-lbl">—</div></div>
+    <div class="sc c-bl"><div class="sl">🔄 Commandes traitées</div><div class="sv" id="stat-cmd-tot">0</div><div class="ss">total historique</div></div>
+    <div class="sc c-pu"><div class="sl">💰 Valeur pipeline</div><div class="sv" id="stat-pipeline">0 €</div><div class="ss">commandes en cours</div></div>
+  </div>
+
+  <div class="stat-grid">
+    <!-- CA mensuel chart -->
+    <div class="stat-card">
+      <h3>📊 CA mensuel 2026</h3>
+      <div class="chart-bars" id="stat-chart-ca"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:#64748b">
+        <span>Total : <strong id="stat-ca-total" style="color:var(--bright)">0 €</strong></span>
+        <span>Moy./mois : <strong id="stat-ca-avg" style="color:var(--orange)">0 €</strong></span>
+      </div>
+    </div>
+
+    <!-- Répartition secteurs -->
+    <div class="stat-card">
+      <h3>🏢 Prospects par secteur</h3>
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#0f172a" stroke-width="20"/>
+          <circle id="d-evt" cx="60" cy="60" r="50" fill="none" stroke="#38bdf8" stroke-width="20" stroke-dasharray="24 290" stroke-dashoffset="0"/>
+          <circle id="d-imm" cx="60" cy="60" r="50" fill="none" stroke="#a78bfa" stroke-width="20" stroke-dasharray="24 290" stroke-dashoffset="-24"/>
+          <circle id="d-btp" cx="60" cy="60" r="50" fill="none" stroke="#f97316" stroke-width="20" stroke-dasharray="24 290" stroke-dashoffset="-48"/>
+          <circle id="d-res" cx="60" cy="60" r="50" fill="none" stroke="#fb923c" stroke-width="20" stroke-dasharray="24 290" stroke-dashoffset="-72"/>
+          <circle id="d-com" cx="60" cy="60" r="50" fill="none" stroke="#4ade80" stroke-width="20" stroke-dasharray="24 290" stroke-dashoffset="-96"/>
+          <circle id="d-aut" cx="60" cy="60" r="50" fill="none" stroke="#64748b" stroke-width="20" stroke-dasharray="48 290" stroke-dashoffset="-120"/>
+        </svg>
+        <div style="flex:1">
+          <div class="legend-row"><div class="lr-left"><div class="legend-dot" style="background:#38bdf8"></div>Événementiel</div><div class="lr-right">2 (15%)</div></div>
+          <div class="legend-row"><div class="lr-left"><div class="legend-dot" style="background:#a78bfa"></div>Immobilier</div><div class="lr-right">2 (15%)</div></div>
+          <div class="legend-row"><div class="lr-left"><div class="legend-dot" style="background:#f97316"></div>BTP</div><div class="lr-right">2 (15%)</div></div>
+          <div class="legend-row"><div class="lr-left"><div class="legend-dot" style="background:#fb923c"></div>Restauration</div><div class="lr-right">2 (15%)</div></div>
+          <div class="legend-row"><div class="lr-left"><div class="legend-dot" style="background:#4ade80"></div>Commerce</div><div class="lr-right">2 (15%)</div></div>
+          <div class="legend-row"><div class="lr-left"><div class="legend-dot" style="background:#64748b"></div>Autres</div><div class="lr-right">3 (23%)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance par catégorie produit -->
+    <div class="stat-card">
+      <h3>📦 Marge par catégorie produit</h3>
+      <div class="perf-row"><div class="perf-label">📄 Imprimerie</div><div class="perf-bar-wrap"><div class="perf-fill" style="width:62%;background:#38bdf8">62%</div></div><div class="perf-val">x2.63</div></div>
+      <div class="perf-row"><div class="perf-label">🪧 Signalétique</div><div class="perf-bar-wrap"><div class="perf-fill" style="width:58%;background:#a78bfa">58%</div></div><div class="perf-val">x2.38</div></div>
+      <div class="perf-row"><div class="perf-label">👕 Textile</div><div class="perf-bar-wrap"><div class="perf-fill" style="width:55%;background:#4ade80">55%</div></div><div class="perf-val">x2.22</div></div>
+      <div class="perf-row"><div class="perf-label">🏗️ Grand Format</div><div class="perf-bar-wrap"><div class="perf-fill" style="width:54%;background:#f97316">54%</div></div><div class="perf-val">x2.17</div></div>
+      <div class="perf-row"><div class="perf-label">🎁 Goodies</div><div class="perf-bar-wrap"><div class="perf-fill" style="width:52%;background:#fbbf24">52%</div></div><div class="perf-val">x2.08</div></div>
+      <div style="margin-top:10px;background:#0f172a;border-radius:7px;padding:9px">
+        <div style="font-size:9px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Marge moyenne pondérée</div>
+        <div style="font-size:20px;font-weight:800;color:var(--orange)">~58%</div>
+        <div style="font-size:9px;color:#64748b;margin-top:2px">Coefficient moyen ×2.38</div>
+      </div>
+    </div>
+
+    <!-- Top prospects -->
+    <div class="stat-card">
+      <h3>🔥 Top prospects à fort potentiel</h3>
+      <div class="top-item"><div class="top-rank">1</div><div class="top-info"><div class="top-name">🏭 Stellantis (PSA)</div><div class="top-sub">Industrie · Priorité haute</div></div><div class="top-val">~5K€</div></div>
+      <div class="top-item"><div class="top-rank">2</div><div class="top-info"><div class="top-name">🏟️ Parc Expo 70</div><div class="top-sub">Événementiel · Récurrent</div></div><div class="top-val">~3K€</div></div>
+      <div class="top-item"><div class="top-rank">3</div><div class="top-info"><div class="top-name">🚗 Concessionnaires</div><div class="top-sub">Automobile · Multi-sites</div></div><div class="top-val">~2.5K€</div></div>
+      <div class="top-item"><div class="top-rank">4</div><div class="top-info"><div class="top-name">🏠 Bersot Immobilier</div><div class="top-sub">Immobilier · Récurrent</div></div><div class="top-val">~1.5K€</div></div>
+      <div class="top-item"><div class="top-rank">5</div><div class="top-info"><div class="top-name">🏡 YNSH Immobilier</div><div class="top-sub">Immobilier · En développement</div></div><div class="top-val">~1K€</div></div>
+      <div style="margin-top:9px;background:#0f172a;border-radius:7px;padding:9px">
+        <div style="font-size:9px;color:#64748b;margin-bottom:3px">CA POTENTIEL TOTAL ESTIMÉ</div>
+        <div style="font-size:22px;font-weight:800;color:#4ade80">~15 000 €</div>
+        <div style="font-size:9px;color:#64748b">si 25% prospects convertis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projection & résumé financier -->
+  <div class="proj-card">
+    <h3>🚀 Projection & Résumé stratégique</h3>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div><div class="proj-sub">CA projeté annuel</div><div class="proj-big" id="stat-proj2">—</div><div class="proj-sub">basé sur tendance actuelle</div></div>
+      <div><div class="proj-sub">Objectif mensuel</div><div class="proj-big" style="color:#4ade80">3 000 €</div><div class="proj-sub">cible DB7 2026</div></div>
+      <div><div class="proj-sub">Prospects restants</div><div class="proj-big" style="color:#38bdf8">12</div><div class="proj-sub">à convertir</div></div>
+      <div><div class="proj-sub">Mois pour plafond</div><div class="proj-big" id="stat-mois-plaf" style="color:#fbbf24">—</div><div class="proj-sub">à 3 000€/mois</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ TAB 9 — FLUX ══════════ -->
+<div class="panel" id="tab-flux">
+<div class="cb">
+  <div class="card">
+    <div class="ct">🔄 Flux de travail complet DB7</div>
+    <span style="display:inline-flex;align-items:center;gap:5px;background:var(--greenL);color:var(--green);font-size:.73rem;font-weight:700;padding:3px 9px;border-radius:20px;margin-bottom:14px">✅ Connecté — Gmail · Notion · Google Agenda</span>
+    <div class="stp"><div class="sn">1</div><div class="sb2"><h4>🧮 Calcule tes prix (onglet Calculateur)</h4><p>Entre le coût fournisseur, choisis dans le catalogue. La marge s'applique automatiquement.</p></div></div>
+    <div class="stp"><div class="sn">2</div><div class="sb2"><h4>🏢 Remplis les infos client (onglet Devis)</h4><p>Nom, email, produits. Les templates emails se personnalisent automatiquement.</p></div></div>
+    <div class="stp"><div class="sn">3</div><div class="sb2"><h4>📦 Convertis en commande active</h4><p>Dès accord client, créer la commande dans l'onglet Commandes. Suis chaque étape : production → expédition → livraison → facturation → paiement.</p></div></div>
+    <div class="stp"><div class="sn">4</div><div class="sb2"><h4>⚡ Génère la commande Claude</h4><p>Texte prêt à copier-coller dans Claude. Il génère le PDF devis, met à jour Notion, crée le brouillon Gmail et pose un rappel Agenda.</p></div></div>
+    <div class="stp"><div class="sn">5</div><div class="sb2"><h4>✅ Gère tes tâches (onglet Tâches)</h4><p>Crée des rappels de relance, des tâches de suivi livraison, des obligations admin. Tout est centralisé.</p></div></div>
+    <div class="stp"><div class="sn">6</div><div class="sb2"><h4>💰 Enregistre dans Finances</h4><p>Recettes ET dépenses. Le bilan, l'URSSAF et le plafond micro se calculent automatiquement.</p></div></div>
+    <div class="stp"><div class="sn">7</div><div class="sb2"><h4>📊 Analyse tes Statistiques</h4><p>Suivi mensuel, funnel, projection annuelle, top prospects. Pilote ton activité avec des données réelles.</p></div></div>
+  </div>
+  <div class="card">
+    <div class="ct">📊 Ce qui est en place</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
+      <div class="sb bl"><div class="sl">CRM Prospects</div><div class="sv">✅ 13</div></div>
+      <div class="sb bl"><div class="sl">Notion Devis</div><div class="sv">✅ Actif</div></div>
+      <div class="sb bl"><div class="sl">Notion Factures</div><div class="sv">✅ Actif</div></div>
+      <div class="sb bl"><div class="sl">Gmail</div><div class="sv">✅ Connecté</div></div>
+      <div class="sb bl"><div class="sl">Google Agenda</div><div class="sv">✅ Connecté</div></div>
+      <div class="sb ac"><div class="sl">Commandes</div><div class="sv">✅ Suivi</div></div>
+      <div class="sb ac"><div class="sl">Tâches</div><div class="sv">✅ Actif</div></div>
+      <div class="sb" style="background:var(--greenL)"><div class="sl">Catalogue</div><div class="sv" style="color:var(--green)">✅ 70+ prod.</div></div>
+      <div class="sb" style="background:var(--greenL)"><div class="sl">Emails templates</div><div class="sv" style="color:var(--green)">✅ 6 modèles</div></div>
+      <div class="sb" style="background:var(--greenL)"><div class="sl">Livre recettes</div><div class="sv" style="color:var(--green)">✅ Légal</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL EMAIL ══════ -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal">
+    <h3 id="modal-title">✉️ Email</h3>
+    <textarea id="modal-email-body"></textarea>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-copy" onclick="copyModalEmail()">📋 Copier l'email</button>
+      <button class="mbtn mbtn-close" onclick="closeModal()">✕ Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL DETAIL COMMANDE ══════ -->
+<div class="modal-overlay" id="cmd-modal">
+  <div class="modal" style="max-width:500px">
+    <h3 id="cmd-modal-title">📦 Commande</h3>
+    <div id="cmd-modal-body"></div>
+    <div class="modal-btns">
+      <button class="mbtn" style="background:var(--orange);color:#fff" id="cmd-modal-next-btn" onclick="advanceCommande()">➡️ Étape suivante</button>
+      <button class="mbtn mbtn-close" onclick="document.getElementById('cmd-modal').classList.remove('vis')">✕ Fermer</button>
+    </div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+const crmData=[
+  {id:1,icon:"🏟️",nom:"Parc Expo 70",secteur:"Événementiel",ville:"Vesoul",statut:"À contacter",priorite:"🔥 Haute",tel:"",besoins:"Bâches grand format, kakémonos, signalétique événementielle, banderoles, flyers exposants",notes:"Gère les grands événements de Vesoul. Potentiel récurrent sur chaque salon/exposition.",lat:47.6390,lng:6.1590},
+  {id:2,icon:"🏠",nom:"Bersot Immobilier Vesoul",secteur:"Immobilier",ville:"Vesoul",statut:"À contacter",priorite:"🔥 Haute",tel:"",besoins:"Panneaux vente/location, kakémonos vitrine, flyers biens, cartes agents, roll-up",notes:"Agence immobilière active sur Vesoul. Fort besoin en supports visuels.",lat:47.6215,lng:6.1503},
+  {id:3,icon:"🎪",nom:"CIAPV — Foire de Vesoul",secteur:"Événementiel",ville:"Vesoul",statut:"À contacter",priorite:"⚡ Moyenne",tel:"",besoins:"Banderoles, kakémonos, signalétique, flyers programme foire",notes:"Foire annuelle ~80 exposants. Besoin récurrent chaque année.",lat:47.6375,lng:6.1620},
+  {id:4,icon:"🏭",nom:"Stellantis (PSA) — Vesoul",secteur:"Industrie",ville:"Vesoul",statut:"À contacter",priorite:"🔥 Haute",tel:"",besoins:"Communication interne, affiches sécurité, signalétique usine, supports RH",notes:"Site industriel majeur. Potentiel énorme. Viser le service communication.",lat:47.6247,lng:6.2450},
+  {id:5,icon:"🏥",nom:"Centre Hospitalier de Vesoul",secteur:"Santé",ville:"Vesoul",statut:"À contacter",priorite:"🌱 Basse",tel:"",besoins:"Signalétique interne, flyers prévention, affiches campagnes santé",notes:"Grand établissement public. Marchés publics. Long terme.",lat:47.6335,lng:6.1540},
+  {id:6,icon:"🏡",nom:"YNSH Immobilier",secteur:"Immobilier",ville:"Vesoul",statut:"À contacter",priorite:"🔥 Haute",tel:"",besoins:"Panneaux vente, flyers biens, cartes de visite, affiches vitrine",notes:"Agence en développement. Très réceptive aux partenariats locaux.",lat:47.6180,lng:6.1640},
+  {id:7,icon:"🏗️",nom:"CAPEB 70 — Artisans Bâtiment",secteur:"BTP",ville:"Vesoul",statut:"À contacter",priorite:"⚡ Moyenne",tel:"03 84 75 23 80",besoins:"Brochures membres, flyers formation, affiches, rapport annuel imprimé",notes:"Syndicat BTP Haute-Saône. Double opportunité : syndicat + membres artisans.",lat:47.6220,lng:6.1458},
+  {id:8,icon:"🍽️",nom:"La Femme du Boulanger",secteur:"Restauration/Hôtellerie",ville:"Vesoul",statut:"À contacter",priorite:"⚡ Moyenne",tel:"",besoins:"Menus saisonniers, cartes de visite, flyers promotions, packaging",notes:"Restaurant gastronomique en centre de Vesoul. Besoins récurrents.",lat:47.6205,lng:6.1515},
+  {id:9,icon:"🚗",nom:"Concessionnaires Automobiles",secteur:"Automobile",ville:"Vesoul",statut:"À contacter",priorite:"🔥 Haute",tel:"",besoins:"Affiches promotions véhicules, vitrophanie, banderoles, PLV showroom",notes:"Cibler Peugeot, Citroën, Renault, Toyota Vesoul. Très demandeurs.",lat:47.6153,lng:6.1478},
+  {id:10,icon:"🏢",nom:"Fédération BTP Haute-Saône",secteur:"BTP",ville:"Vesoul",statut:"À contacter",priorite:"⚡ Moyenne",tel:"",besoins:"Supports syndicaux, communication institutionnelle, rapports annuels",notes:"Fédération BTP Haute-Saône. Bon relais pour toucher des PME du secteur.",lat:47.6235,lng:6.1595},
+  {id:11,icon:"🏨",nom:"Eurotel Le Saint Jacques",secteur:"Restauration/Hôtellerie",ville:"Frotey-lès-Vesoul",statut:"À contacter",priorite:"⚡ Moyenne",tel:"",besoins:"Menus imprimés, flyers promotionnels, signalétique hôtel, bâches",notes:"Hôtel 3 étoiles de référence sur Vesoul. Image soignée.",lat:47.5993,lng:6.1632},
+  {id:12,icon:"🛒",nom:"Commerces Centre-Ville",secteur:"Commerce/Retail",ville:"Vesoul",statut:"À contacter",priorite:"⚡ Moyenne",tel:"",besoins:"Vitrophanie, affiches soldes, flyers, cartes de fidélité, sacs",notes:"Boutiques, épiceries, pharmacies, opticiens. Prospection terrain.",lat:47.6198,lng:6.1561},
+  {id:13,icon:"🥖",nom:"Boulangerie Dupont",secteur:"Commerce/Retail",ville:"Vesoul",statut:"Client",priorite:"🔥 Haute",tel:"06 12 34 56 78",besoins:"Flyers A5, Roll-up, Cartes de visite — devis DB7-001",notes:"Devis DB7-001 envoyé. 249,12€ · Bénéfice 151,12€. Relance 02/04/2026.",lat:47.6200,lng:6.1580},
+];
+
+const catalogue=[
+  {cat:"petit",icon:"🎴",nom:"Cartes de visite — 50 ex.",cout:15,desc:"85×54mm recto/verso brillant ou mat"},{cat:"petit",icon:"🎴",nom:"Cartes de visite — 250 ex.",cout:22,desc:"85×54mm, mat ou brillant"},{cat:"petit",icon:"🎴",nom:"Cartes de visite — 500 ex.",cout:30,desc:"85×54mm, finition premium"},
+  {cat:"petit",icon:"🗒️",nom:"Flyers A6 — 250 ex.",cout:18,desc:"105×148mm recto, 135g"},{cat:"petit",icon:"🗒️",nom:"Flyers A5 — 500 ex.",cout:25,desc:"148×210mm recto-verso, 135g"},{cat:"petit",icon:"🗒️",nom:"Flyers A4 — 500 ex.",cout:32,desc:"210×297mm recto-verso, 135g"},
+  {cat:"petit",icon:"📄",nom:"Dépliants 3 volets A4 — 250 ex.",cout:38,desc:"A4 plié en 3 (DL), 135g"},{cat:"petit",icon:"📔",nom:"Brochures A5 agrafées — 100 ex.",cout:48,desc:"8 pages min, couverture 250g"},{cat:"petit",icon:"📅",nom:"Calendriers personnalisés — 100 ex.",cout:55,desc:"13 mois, A4 mural"},
+  {cat:"petit",icon:"📝",nom:"Autocopiant 2 feuillets — 50 ex.",cout:35,desc:"NCR 2 feuillets A4 ou A5"},{cat:"petit",icon:"🖊️",nom:"Tampons encreurs — 1 ex.",cout:12,desc:"Flash auto-encreur personnalisé"},{cat:"petit",icon:"📁",nom:"Chemise cartonnée — 100 ex.",cout:65,desc:"A4, rabat intérieur"},
+  {cat:"petit",icon:"🏷️",nom:"Stickers intérieur — 250 ex.",cout:17,desc:"Brillant, usage intérieur"},{cat:"petit",icon:"🏷️",nom:"Stickers extérieur — 250 ex.",cout:26,desc:"Monomère blanc 110g/m², résistant UV"},{cat:"petit",icon:"💎",nom:"Sticker Doming — 50 ex.",cout:49,desc:"Relief 3D résine"},
+  {cat:"petit",icon:"📄",nom:"Affiche A3 — 100 ex.",cout:35,desc:"297×420mm, 170g"},{cat:"petit",icon:"📄",nom:"Affiche A2 — 50 ex.",cout:45,desc:"420×594mm, 170g"},{cat:"petit",icon:"📄",nom:"Affiche A1 — 25 ex.",cout:58,desc:"594×841mm, 170g"},
+  {cat:"petit",icon:"🧲",nom:"Magnet frigo — 100 ex.",cout:30,desc:"300 microns, format sur-mesure"},
+  {cat:"signa",icon:"📋",nom:"Roll-up ECO 85×200 cm",cout:29,desc:"Structure alu légère, pochette incluse"},{cat:"signa",icon:"📋",nom:"Roll-up Premium 100×200 cm",cout:48,desc:"Double barre de tension, haute déf"},{cat:"signa",icon:"🏛️",nom:"Totem publicitaire",cout:85,desc:"Panneau totem recto/verso"},
+  {cat:"signa",icon:"🗃️",nom:"PLV de comptoir carton",cout:45,desc:"Présentoir carton ou PVC"},{cat:"signa",icon:"🏠",nom:"Comptoir pliable tissu",cout:145,desc:"Stand léger et compact"},{cat:"signa",icon:"🪟",nom:"Enseigne suspendue double face",cout:95,desc:"Impression recto-verso"},
+  {cat:"signa",icon:"🪧",nom:"Panneaux rigides PVC — lot 10",cout:68,desc:"60×40cm, PVC 5mm, impression UV"},{cat:"signa",icon:"🪧",nom:"Panneau Dibond",cout:55,desc:"Alu composite 3mm"},{cat:"signa",icon:"🚶",nom:"Stop trottoir chevalet",cout:45,desc:"Format A1, alu anodisé"},
+  {cat:"grand",icon:"🏗️",nom:"Bâche PVC 2×1 m",cout:16,desc:"PVC 440g/m², œillets tous les 50cm"},{cat:"grand",icon:"🏗️",nom:"Bâche PVC 3×2 m",cout:46,desc:"PVC 440g/m², œillets renforcés"},{cat:"grand",icon:"🏗️",nom:"Bâche PVC 6×3 m",cout:138,desc:"Grand format événementiel"},
+  {cat:"grand",icon:"🚩",nom:"Drapeaux publicitaires — 1 ex.",cout:83,desc:"Polyester 115g, structure alu"},{cat:"grand",icon:"⛺",nom:"Tente publicitaire 3×3 m",cout:380,desc:"Alu anodisé, impression 4 faces"},{cat:"grand",icon:"🖼️",nom:"Affiche grand format A0",cout:25,desc:"841×1189mm"},
+  {cat:"grand",icon:"🖼️",nom:"Mur d'image tissu",cout:185,desc:"Cadre alu, tissu polyester tendu"},{cat:"grand",icon:"🧩",nom:"Stand modulable aimanté",cout:245,desc:"Panneaux aimantés reconfigurables"},{cat:"grand",icon:"🪟",nom:"Vinyle adhésif — au m²",cout:10,desc:"Blanc brillant ou mat"},
+  {cat:"grand",icon:"🪟",nom:"Vinyle microperforé — au m²",cout:12,desc:"Vitrine commerçant et véhicule"},{cat:"grand",icon:"🟫",nom:"Sol imprimé — au m²",cout:16,desc:"Vinyle 180µ antidérapant"},
+  {cat:"textile",icon:"👕",nom:"T-shirts personnalisés — 10 ex.",cout:45,desc:"Flocage ou sérigraphie, toutes tailles"},{cat:"textile",icon:"👔",nom:"Polos brodés — 10 ex.",cout:65,desc:"Broderie haute définition logo"},{cat:"textile",icon:"🛍️",nom:"Sacs tissu — 100 ex.",cout:85,desc:"Non-tissé ou coton, impression"},
+  {cat:"textile",icon:"🏅",nom:"Tour de cou — 100 ex.",cout:28,desc:"Sublimation ou sérigraphie"},
+  {cat:"goodies",icon:"🖊️",nom:"Stylos publicitaires — 100 ex.",cout:45,desc:"Impression logo recto/verso"},{cat:"goodies",icon:"📛",nom:"Badges personnalisés — 100 ex.",cout:35,desc:"Ronds ou carrés"},{cat:"goodies",icon:"☕",nom:"Tasses & mugs — 24 ex.",cout:72,desc:"Céramique blanche 330ml"},
+  {cat:"goodies",icon:"📓",nom:"Carnets personnalisés — 50 ex.",cout:65,desc:"A5 ou A6, couverture rigide"},{cat:"goodies",icon:"💾",nom:"Clés USB — 50 ex.",cout:95,desc:"4 Go ou 8 Go, impression logo"},{cat:"goodies",icon:"🔋",nom:"Batterie externe — 25 ex.",cout:95,desc:"4 000 mAh, logo imprimé"},
+];
+
+const emailTemplates=[
+  {id:"prosp",label:"📩 Prospection",fn:(c,s)=>`Objet : Supports de communication pour ${c||'votre entreprise'} — DB7 Groupe\n\nBonjour${c?' '+c:''},\n\nJe me permets de vous contacter car je suis Imad ElAzzouzi, gérant de DB7 Groupe, agence de communication basée à Vesoul spécialisée dans l'impression professionnelle.\n\nNous accompagnons des ${s||'entreprises de la région'} avec des supports de communication imprimés de qualité : flyers, kakémonos, roll-up, bâches, cartes de visite, plaquettes…\n\nNotre force : livraison rapide directement chez vous, sans frais de port supplémentaires.\n\nSeriez-vous disponible pour un échange cette semaine ?\n\nBien cordialement,\nImad ElAzzouzi — DB7 Groupe\n8 rue de Marcodey, 70000 Vesoul\ncontact@db7groupe.com | SIRET : 883 970 212 00014`},
+  {id:"envoi-devis",label:"📄 Envoi devis",fn:(c,s)=>`Objet : Votre devis DB7 Groupe — ${c||'[Nom client]'}\n\nBonjour${c?' '+c:''},\n\nVeuillez trouver ci-joint votre devis pour les supports demandés.\n\nCe devis est valable 30 jours. Pour valider, retournez-le signé avec la mention "Bon pour accord".\n\nLivraison directe sous 5 à 7 jours ouvrés après validation.\n\nCordialement,\nImad ElAzzouzi — DB7 Groupe\ncontact@db7groupe.com`},
+  {id:"relance",label:"🔔 Relance devis",fn:(c,s)=>`Objet : Relance — Votre devis DB7 Groupe\n\nBonjour${c?' '+c:''},\n\nJe reviens vers vous concernant le devis transmis il y a quelques jours.\n\nAvez-vous eu l'occasion d'en prendre connaissance ? Je reste disponible pour tout ajustement.\n\nCordialement,\nImad ElAzzouzi — DB7 Groupe\ncontact@db7groupe.com`},
+  {id:"commande",label:"✅ Confirmation commande",fn:(c,s)=>`Objet : Confirmation de votre commande — DB7 Groupe\n\nBonjour${c?' '+c:''},\n\nJe vous confirme la bonne réception de votre accord. Votre commande est transmise à notre atelier.\n\nLivraison prévue sous 5 à 7 jours ouvrés.\n\nBien cordialement,\nImad ElAzzouzi — DB7 Groupe\ncontact@db7groupe.com`},
+  {id:"facture",label:"💶 Envoi facture",fn:(c,s)=>`Objet : Votre facture DB7 Groupe\n\nBonjour${c?' '+c:''},\n\nVeuillez trouver ci-joint votre facture.\n\nRèglement par virement :\n• Titulaire : Imad ElAzzouzi\n• IBAN : IE10 SUMU 9903 6512 7100 65\n• BIC : SUMUIE22XXX\n• Référence : N° de facture\n\nMerci pour votre confiance.\n\nBien cordialement,\nImad ElAzzouzi — DB7 Groupe`},
+  {id:"merci",label:"🙏 Remerciement",fn:(c,s)=>`Objet : Merci pour votre confiance — DB7 Groupe\n\nBonjour${c?' '+c:''},\n\nJ'espère que votre commande est bien arrivée et que vous êtes satisfait(e) de vos supports.\n\nJe reste à votre disposition pour vos prochains besoins.\n\nBien cordialement,\nImad ElAzzouzi — DB7 Groupe\ncontact@db7groupe.com`},
+];
+
+const fmts={
+  petit:{icon:"📄",margin:62,cls:"p",info:"<strong>📄 Imprimerie :</strong> Marge <strong>62%</strong> — coefficient ×2,63. Flyers, cartes, brochures, affiches, stickers"},
+  signa:{icon:"🪧",margin:58,cls:"s",info:"<strong>🪧 Signalétique :</strong> Marge <strong>58%</strong> — coefficient ×2,38. Roll-ups, totems, panneaux, PLV"},
+  grand:{icon:"🏗️",margin:54,cls:"g",info:"<strong>🏗️ Grand Format :</strong> Marge <strong>54%</strong> — coefficient ×2,17. Bâches, drapeaux, vinyle, stands"},
+  textile:{icon:"👕",margin:55,cls:"t",info:"<strong>👕 Textile :</strong> Marge <strong>55%</strong> — coefficient ×2,22. T-shirts, polos, sacs, tours de cou"},
+  goodies:{icon:"🎁",margin:52,cls:"go",info:"<strong>🎁 Goodies :</strong> Marge <strong>52%</strong> — coefficient ×2,08. Mugs, stylos, clés USB, batteries"},
+};
+
+const PLAFOND=77700;
+const MOIS=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const scol={"À contacter":"#ef4444","Contacté":"#f97316","En discussion":"#fbbf24","Client":"#4ade80"};
+
+let mapInit=false,map,markers={};
+let curFmt='petit',calcList=[],devisProducts=[],curTpl=null;
+let currentCmdId=null;
+
+// ── localStorage helpers ──
+function getRecettes(){try{return JSON.parse(localStorage.getItem('db7_recettes')||'[]')}catch{return []}}
+function saveRecettes(r){localStorage.setItem('db7_recettes',JSON.stringify(r))}
+function getDepenses(){try{return JSON.parse(localStorage.getItem('db7_depenses')||'[]')}catch{return []}}
+function saveDepenses(d){localStorage.setItem('db7_depenses',JSON.stringify(d))}
+function getCommandes(){try{return JSON.parse(localStorage.getItem('db7_commandes')||'[]')}catch{return []}}
+function saveCommandes(c){localStorage.setItem('db7_commandes',JSON.stringify(c))}
+function getTaches(){try{return JSON.parse(localStorage.getItem('db7_taches')||'[]')}catch{return []}}
+function saveTaches(t){localStorage.setItem('db7_taches',JSON.stringify(t))}
+function getContacts(){try{return JSON.parse(localStorage.getItem('db7_contacts')||'{}')}catch{return {}}}
+function saveContacts(c){localStorage.setItem('db7_contacts',JSON.stringify(c))}
+function getNote(){return localStorage.getItem('db7_note')||''}
+function saveNoteStore(v){localStorage.setItem('db7_note',v)}
+function getActivity(){try{return JSON.parse(localStorage.getItem('db7_activity')||'[]')}catch{return []}}
+function saveActivity(a){localStorage.setItem('db7_activity',JSON.stringify(a.slice(0,50)))}
+
+function addActivity(txt,type='blue'){
+  const a=getActivity();
+  const now=new Date();
+  const time=now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  a.unshift({txt,type,time,date:now.toLocaleDateString('fr-FR')});
+  saveActivity(a);
+  renderActivity();
+}
+
+function f2(n){return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+const tabNames=['global','dashboard','calc','devis','commandes','prosp','fin','taches','stats','flux'];
+
+function showTab(id){
+  tabNames.forEach((t,i)=>{
+    document.querySelectorAll('.ntab')[i].classList.toggle('active',t===id);
+    document.getElementById('tab-'+t).classList.toggle('active',t===id);
+  });
+  if(id==='dashboard'){
+    if(!mapInit){initMap();mapInit=true;}
+    else setTimeout(()=>map&&map.invalidateSize(),150);
+  }
+  if(id==='fin') renderFinances();
+  if(id==='global') renderVueGlobale();
+  if(id==='commandes') renderCommandes();
+  if(id==='taches') renderTaches();
+  if(id==='stats') renderStats();
+}
+// ═══════════════════════════════════════════════════════
+// VUE GLOBALE
+// ═══════════════════════════════════════════════════════
+function renderVueGlobale(){
+  const r=getRecettes(),c=getCommandes(),t=getTaches(),contacts=getContacts();
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  const totalCA=r.reduce((s,x)=>s+x.montant,0);
+  const moisCA=r.filter(x=>x.date&&x.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).reduce((s,x)=>s+x.montant,0);
+  const cmdActives=c.filter(x=>!['Payé'].includes(x.statut)).length;
+  const tskUrgentes=t.filter(x=>x.prio==='Urgente'&&x.statut!=='Terminée').length;
+  const contacted=Object.values(contacts).filter(ct=>{if(!ct.lastContact)return false;const d=new Date(ct.lastContact.split('/').reverse().join('-'));return d.getMonth()===m&&d.getFullYear()===y;}).length;
+
+  document.getElementById('vg-ca').textContent=f2(totalCA).replace(' €','€').length>8?Math.round(totalCA)+'€':f2(totalCA);
+  document.getElementById('vg-mois').textContent=f2(moisCA);
+  document.getElementById('vg-mois-lbl').textContent=MOIS[m]+' '+y;
+  document.getElementById('vg-cmd').textContent=cmdActives;
+  document.getElementById('vg-tsk').textContent=tskUrgentes;
+  if(tskUrgentes>0){document.getElementById('notif-dot').style.display='block';document.getElementById('notif-count').textContent='✅ '+tskUrgentes;}
+  else{document.getElementById('notif-dot').style.display='none';document.getElementById('notif-count').textContent='✅';}
+
+  // Objectifs
+  const objCA=Math.min(100,(moisCA/3000)*100);
+  const objProsp=Math.min(100,(contacted/5)*100);
+  const plafPct=Math.min(100,(totalCA/PLAFOND)*100);
+  document.getElementById('obj-ca-pct').textContent=objCA.toFixed(0)+'%';
+  document.getElementById('obj-ca-fill').style.width=objCA+'%';
+  document.getElementById('obj-prosp-pct').textContent=objProsp.toFixed(0)+'%';
+  document.getElementById('obj-prosp-fill').style.width=objProsp+'%';
+  document.getElementById('obj-pla-pct').textContent=plafPct.toFixed(1)+'%';
+  document.getElementById('obj-pla-fill').style.width=plafPct+'%';
+
+  // Taux & panier
+  const clients=crmData.filter(x=>x.statut==='Client').length;
+  document.getElementById('vg-taux').textContent=((clients/13)*100).toFixed(1)+'%';
+  const payees=c.filter(x=>x.statut==='Payé');
+  document.getElementById('vg-panier').textContent=payees.length?f2(payees.reduce((s,x)=>s+x.montant,0)/payees.length):'—';
+  document.getElementById('vg-benef').textContent=f2(totalCA*0.58);
+  document.getElementById('vg-plafond').textContent=f2(Math.max(0,PLAFOND-totalCA));
+
+  // Funnel
+  const fnContact=Object.values(contacts).filter(ct=>ct.lastContact).length;
+  document.getElementById('fn-contact').textContent=fnContact;
+  document.getElementById('fn-contact').style.width=Math.max(5,(fnContact/13)*100)+'%';
+  document.getElementById('fn-contact-v').textContent=fnContact;
+  document.getElementById('fn-clients').textContent=clients;
+  document.getElementById('fn-clients').style.width=Math.max(5,(clients/13)*100)+'%';
+  document.getElementById('fn-clients-v').textContent=clients;
+  const payes=c.filter(x=>x.statut==='Payé').length;
+  document.getElementById('fn-pay').textContent=payes;
+  document.getElementById('fn-pay').style.width=Math.max(0,(payes/13)*100)+'%';
+  document.getElementById('fn-pay-v').textContent=payes;
+
+  // Alertes
+  const today=new Date();
+  const overdue=t.filter(x=>{if(!x.echeance||x.statut==='Terminée')return false;return new Date(x.echeance)<today;});
+  if(overdue.length){
+    document.getElementById('vg-alert').style.display='flex';
+    document.getElementById('vg-alert-txt').innerHTML=`<strong>${overdue.length} tâche(s) en retard !</strong> ${overdue.map(x=>x.titre).join(' · ')}`;
+  } else document.getElementById('vg-alert').style.display='none';
+
+  // Tâches urgentes dans vue globale
+  const urgTasks=t.filter(x=>x.statut!=='Terminée'&&(x.prio==='Urgente'||x.statut==='En cours')).slice(0,5);
+  const el=document.getElementById('vg-tasks-list');
+  if(urgTasks.length){
+    el.innerHTML=urgTasks.map(tk=>{
+      const catCls={'Prospection':'cat-prosp','Devis':'cat-devis','Livraison':'cat-livr','Finance':'cat-fin','Admin':'cat-admin','Autre':'cat-autre'}[tk.cat]||'cat-autre';
+      const isOverdue=tk.echeance&&new Date(tk.echeance)<today;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:#0f172a;border-radius:7px;margin-bottom:5px;border-left:3px solid ${tk.prio==='Urgente'?'#ef4444':tk.statut==='En cours'?'#a78bfa':'#334155'}">
+        <span class="cat-badge ${catCls}">${tk.cat}</span>
+        <span style="flex:1;font-size:10px;color:var(--bright)">${tk.titre}</span>
+        ${isOverdue?`<span style="font-size:9px;color:#ef4444;font-weight:700">⚠️ En retard</span>`:tk.echeance?`<span style="font-size:9px;color:#64748b">${new Date(tk.echeance).toLocaleDateString('fr-FR')}</span>`:''}
+      </div>`;
+    }).join('');
+  } else el.innerHTML='<div style="text-align:center;color:#475569;font-size:11px;padding:12px">Aucune tâche urgente 🎉</div>';
+
+  // Note
+  document.getElementById('vg-note').value=getNote();
+  renderActivity();
+}
+
+function renderActivity(){
+  const a=getActivity();
+  const el=document.getElementById('activity-feed');
+  if(!a.length){el.innerHTML='<div class="act-item act-blue"><div class="act-ic">🚀</div><div class="act-body"><div class="act-txt">DB7 Groupe — Tableau de bord initialisé</div><div class="act-time">Aujourd\'hui</div></div></div>';return;}
+  el.innerHTML=a.slice(0,12).map(ac=>`<div class="act-item act-${ac.type}"><div class="act-ic">${ac.type==='green'?'✅':ac.type==='orange'?'📦':ac.type==='purple'?'✅':'ℹ️'}</div><div class="act-body"><div class="act-txt">${ac.txt}</div><div class="act-time">${ac.date} à ${ac.time}</div></div></div>`).join('');
+}
+
+function saveNote(){const v=document.getElementById('vg-note').value;saveNoteStore(v);addActivity('Note rapide sauvegardée','blue');}
+
+// ═══════════════════════════════════════════════════════
+// MAP / CRM
+// ═══════════════════════════════════════════════════════
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([47.625,6.17],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
+  const db7Ic=L.divIcon({html:`<div style="background:#1d4ed8;border:3px solid #f97316;border-radius:50%;width:16px;height:16px;box-shadow:0 0 0 4px rgba(249,115,22,.3)"></div>`,className:'',iconSize:[16,16],iconAnchor:[8,8]});
+  L.marker([47.621,6.154],{icon:db7Ic}).addTo(map).bindPopup(`<b style="color:#1d4ed8">🏢 DB7 Groupe</b><br><small>8 rue de Marcodey, Vesoul</small>`);
+  crmData.forEach(c=>{
+    const col=scol[c.statut]||"#94a3b8",sz=c.priorite==="🔥 Haute"?19:c.priorite==="⚡ Moyenne"?15:12;
+    const ic=L.divIcon({html:`<div style="background:${col};border:2px solid #fff;border-radius:50%;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;font-size:${sz*.55}px${c.priorite==="🔥 Haute"?`;box-shadow:0 0 0 4px ${col}44`:''}">${c.icon}</div>`,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
+    markers[c.id]=L.marker([c.lat,c.lng],{icon:ic}).addTo(map).bindPopup(`<div style="font-family:Segoe UI;min-width:160px"><b>${c.icon} ${c.nom}</b><br><small style="color:#666">${c.secteur} · ${c.statut}</small></div>`).on('click',()=>showDetail(c));
+  });
+}
+
+function renderList(list){
+  const el=document.getElementById('d-client-list');
+  document.getElementById('list-count').textContent=`(${list.length})`;
+  el.innerHTML='';
+  list.forEach(c=>{
+    const bc=c.priorite==="🔥 Haute"?"dbg-h":c.priorite==="🌱 Basse"?"dbg-b":"dbg-m";
+    const d=document.createElement('div');d.className='dit';
+    d.innerHTML=`<div class="di-ic">${c.icon}</div><div class="di-bd"><div class="di-nm">${c.nom}</div><div class="di-mt">${c.secteur} · ${c.ville}</div></div><div class="di-bg"><span class="dbg ${bc}">${c.priorite.replace("🔥 ","H").replace("⚡ ","M").replace("🌱 ","B")}</span>${c.statut==='Client'?'<span class="dbg dbg-c">✓</span>':''}</div>`;
+    d.addEventListener('click',()=>{document.querySelectorAll('.dit').forEach(x=>x.classList.remove('act'));d.classList.add('act');showDetail(c);if(markers[c.id]){map&&map.setView([c.lat,c.lng],14);markers[c.id].openPopup();}});
+    el.appendChild(d);
+  });
+}
+
+function showDetail(c){
+  const p=document.getElementById('d-detail');p.classList.add('vis');
+  document.getElementById('dd-name').textContent=`${c.icon} ${c.nom}`;
+  document.getElementById('dd-sect').textContent=c.secteur;
+  document.getElementById('dd-ville').textContent=c.ville;
+  document.getElementById('dd-stat').textContent=c.statut;
+  document.getElementById('dd-prio').textContent=c.priorite;
+  document.getElementById('dd-tel').textContent=c.tel||'Non renseigné';
+  document.getElementById('dd-besoins').textContent=c.besoins;
+  document.getElementById('dd-notes').textContent=c.notes;
+}
+
+function filterClients(){
+  const s=document.getElementById('d-search').value.toLowerCase();
+  const fs=document.getElementById('d-fstatut').value;
+  const fse=document.getElementById('d-fsecteur').value;
+  const fp=document.getElementById('d-fprio').value;
+  const f=crmData.filter(c=>(!s||c.nom.toLowerCase().includes(s))&&(!fs||c.statut===fs)&&(!fse||c.secteur===fse)&&(!fp||c.priorite===fp));
+  renderList(f);
+  if(map)crmData.forEach(c=>{if(!markers[c.id])return;f.find(x=>x.id===c.id)?(!map.hasLayer(markers[c.id])&&markers[c.id].addTo(map)):(map.hasLayer(markers[c.id])&&map.removeLayer(markers[c.id]));});
+  renderTable(f);
+}
+
+function resetFilters(){
+  document.getElementById('d-search').value='';
+  ['d-fstatut','d-fsecteur','d-fprio'].forEach(id=>document.getElementById(id).value='');
+  filterClients();
+}
+
+function renderTable(list){
+  const tb=document.getElementById('d-table-body');tb.innerHTML='';
+  list.forEach((c,i)=>{
+    const pc=c.priorite==="🔥 Haute"?"#ef4444":c.priorite==="🌱 Basse"?"#4ade80":"#fbbf24";
+    tb.innerHTML+=`<tr onclick="jumpTo(${c.id})"><td style="color:#64748b">${i+1}</td><td><strong>${c.icon} ${c.nom}</strong></td><td>${c.secteur}</td><td>${c.ville}</td><td><span style="color:${scol[c.statut]||'#94a3b8'}">${c.statut}</span></td><td><span class="pdot" style="background:${pc}"></span>${c.priorite}</td><td style="color:#64748b">${c.tel||'—'}</td><td style="color:#64748b;font-size:9.5px">${c.besoins.split(",").slice(0,2).join(", ")}…</td></tr>`;
+  });
+}
+
+function jumpTo(id){const c=crmData.find(x=>x.id===id);if(!c)return;showDetail(c);if(map&&markers[c.id]){map.setView([c.lat,c.lng],14);markers[c.id].openPopup();}window.scrollTo({top:0,behavior:'smooth'});}
+// ═══════════════════════════════════════════════════════
+// CATALOGUE + CALCULATEUR
+// ═══════════════════════════════════════════════════════
+function initCatalogue(){
+  const g=document.getElementById('cat-grid');g.innerHTML='';
+  const cats=[{k:'petit',l:'📄 Imprimerie'},{k:'signa',l:'🪧 Signalétique'},{k:'grand',l:'🏗️ Grand Format'},{k:'textile',l:'👕 Textile'},{k:'goodies',l:'🎁 Goodies'}];
+  const margeMap={petit:.62,signa:.58,grand:.54,textile:.55,goodies:.52};
+  cats.forEach(({k,l})=>{
+    const sep=document.createElement('div');sep.className='cat-sep';sep.textContent=l+' — '+Math.round(margeMap[k]*100)+'%';g.appendChild(sep);
+    catalogue.filter(p=>p.cat===k).forEach(p=>{
+      const sell=(p.cout/(1-margeMap[k])).toFixed(2).replace('.',',');
+      const d=document.createElement('div');d.className='cat-item';
+      d.innerHTML=`<div class="ci-l"><div class="ci-icon ${k.charAt(0)}">${p.icon}</div><div><div class="ci-name">${p.nom}</div><div class="ci-sub">${p.desc} · coût ${p.cout}€</div></div></div><div class="ci-price">${sell} €</div>`;
+      d.addEventListener('click',()=>{selectFormat(k);document.getElementById('c-cost').value=p.cout;document.getElementById('c-name').value=p.nom;calculate();});
+      g.appendChild(d);
+    });
+  });
+}
+
+function selectFormat(fmt){
+  curFmt=fmt;
+  ['petit','signa','grand','textile','goodies'].forEach(f=>document.getElementById('btn-'+f).classList.toggle('active',f===fmt));
+  document.getElementById('fmt-info').innerHTML=fmts[fmt].info;
+  const m=fmts[fmt].margin;
+  document.getElementById('c-slider').value=m;document.getElementById('c-slider-val').textContent=m+'%';document.getElementById('c-marg-lbl').textContent=m+'%';
+  document.getElementById('badge-'+fmt).textContent=m+'%';calculate();
+}
+
+function onSlider(){const v=document.getElementById('c-slider').value;document.getElementById('c-slider-val').textContent=v+'%';document.getElementById('c-marg-lbl').textContent=v+'%';document.getElementById('badge-'+curFmt).textContent=v+'%';calculate();}
+
+function calculate(){
+  const cost=parseFloat(document.getElementById('c-cost').value),marg=parseFloat(document.getElementById('c-slider').value)/100;
+  if(isNaN(cost)||cost<=0){document.getElementById('c-sell').innerHTML='—<span> €</span>';['c-rcost','c-rprofit'].forEach(id=>document.getElementById(id).textContent='— €');document.getElementById('c-rcoef').textContent='—x';return;}
+  const sell=cost/(1-marg),profit=sell-cost,coef=sell/cost;
+  document.getElementById('c-sell').innerHTML=sell.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'<span> €</span>';
+  document.getElementById('c-rcost').textContent=f2(cost);document.getElementById('c-rprofit').textContent=f2(profit);document.getElementById('c-rcoef').textContent=coef.toFixed(2)+'x';
+  document.getElementById('c-bar-cost').style.width=((1-marg)*100)+'%';document.getElementById('c-bar-marge').style.width=(marg*100)+'%';
+}
+
+function addToList(){
+  const cost=parseFloat(document.getElementById('c-cost').value);if(isNaN(cost)||cost<=0){alert('Entre un prix fournisseur !');return;}
+  const marg=parseFloat(document.getElementById('c-slider').value)/100,sell=cost/(1-marg);
+  const name=document.getElementById('c-name').value.trim()||'Produit';
+  const item={id:Date.now(),fmt:curFmt,name,cost,marg:marg*100,sell,profit:sell-cost};
+  calcList.push(item);devisProducts.push({...item});
+  document.getElementById('c-cost').value='';document.getElementById('c-name').value='';calculate();renderCalcList();renderDevisProducts();
+}
+
+function removeFromList(id){calcList=calcList.filter(x=>x.id!==id);devisProducts=devisProducts.filter(x=>x.id!==id);renderCalcList();renderDevisProducts();}
+
+function renderCalcList(){
+  const el=document.getElementById('c-list'),cnt=document.getElementById('c-count'),sum=document.getElementById('c-summary');
+  cnt.textContent=calcList.length+' produit'+(calcList.length>1?'s':'');
+  if(!calcList.length){el.innerHTML='<div class="hem">Aucun produit.</div>';sum.style.display='none';return;}
+  el.innerHTML=calcList.map(it=>`<div class="hi"><div class="hi-ic ${it.fmt.charAt(0)}">${fmts[it.fmt].icon}</div><div class="hi-bd"><div class="hi-nm">${it.name}</div><div class="hi-dt">Coût: ${f2(it.cost)} · Marge: ${it.marg.toFixed(0)}%</div></div><div class="hi-pr"><div class="hi-sl">${f2(it.sell)}</div><div class="hi-bn">+${f2(it.profit)}</div></div><button class="hi-dl" onclick="removeFromList(${it.id})">✕</button></div>`).join('');
+  const tc=calcList.reduce((s,x)=>s+x.cost,0),ts=calcList.reduce((s,x)=>s+x.sell,0),tb=calcList.reduce((s,x)=>s+x.profit,0);
+  document.getElementById('s-cout').textContent=f2(tc);document.getElementById('s-ben').textContent=f2(tb);document.getElementById('s-marg').textContent=(ts>0?(tb/ts*100):0).toFixed(1)+'%';
+  document.getElementById('s-total').textContent=ts.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';sum.style.display='block';
+}
+
+function clearList(){if(confirm('Vider la liste ?')){calcList=[];devisProducts=[];renderCalcList();renderDevisProducts();}}
+
+// ═══════════════════════════════════════════════════════
+// DEVIS
+// ═══════════════════════════════════════════════════════
+function addProductToDevis(){
+  const name=document.getElementById('dv-pname').value.trim(),fmt=document.getElementById('dv-pfmt').value,cost=parseFloat(document.getElementById('dv-pcost').value);
+  if(!name||isNaN(cost)||cost<=0){alert('Remplis la description et le coût !');return;}
+  const m={petit:.62,signa:.58,grand:.54,textile:.55,goodies:.52}[fmt]||.58,sell=cost/(1-m);
+  devisProducts.push({id:Date.now(),fmt,name,cost,sell,profit:sell-cost});
+  document.getElementById('dv-pname').value='';document.getElementById('dv-pcost').value='';renderDevisProducts();
+}
+
+function removeDevisProduct(id){devisProducts=devisProducts.filter(x=>x.id!==id);renderDevisProducts();}
+
+function renderDevisProducts(){
+  const el=document.getElementById('dv-products-display'),tc=document.getElementById('dv-total-card');
+  if(!devisProducts.length){el.innerHTML='<div class="hem">Aucun produit.</div>';tc.style.display='none';return;}
+  el.innerHTML=devisProducts.map(it=>`<div class="hi"><div class="hi-ic ${it.fmt.charAt(0)}">${fmts[it.fmt].icon}</div><div class="hi-bd"><div class="hi-nm">${it.name}</div><div class="hi-dt">Coût: ${f2(it.cost)}</div></div><div class="hi-pr"><div class="hi-sl">${f2(it.sell)}</div></div><button class="hi-dl" onclick="removeDevisProduct(${it.id})">✕</button></div>`).join('');
+  const ts=devisProducts.reduce((s,x)=>s+x.sell,0);document.getElementById('dv-total').textContent=ts.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';tc.style.display='block';
+}
+
+function prefillDevis(){renderDevisProducts();}
+
+function generateCommand(){
+  const co=document.getElementById('dv-company').value.trim(),em=document.getElementById('dv-email').value.trim();
+  if(!co||!em){alert('Remplis le nom et l\'email client !');return;}
+  if(!devisProducts.length){alert('Ajoute au moins un produit !');return;}
+  const ct=document.getElementById('dv-contact').value.trim(),tl=document.getElementById('dv-tel').value.trim(),ad=document.getElementById('dv-adr').value.trim(),vi=document.getElementById('dv-ville').value.trim(),nt=document.getElementById('dv-notes').value.trim(),rl=document.getElementById('dv-relance').value;
+  let lines=['DEVIS DB7',`Client: ${co}`,`Email: ${em}`];
+  if(ct)lines.push(`Contact: ${ct}`);if(tl)lines.push(`Téléphone: ${tl}`);if(ad)lines.push(`Adresse: ${ad}`);if(vi)lines.push(`Ville: ${vi}`);
+  lines.push('','Produits:');devisProducts.forEach(p=>lines.push(`- ${p.name} | format: ${p.fmt} | coût: ${p.cost.toFixed(2)}€`));
+  if(nt)lines.push('',`Notes: ${nt}`);lines.push(`Relance dans: ${rl} jours`);
+  document.getElementById('dv-cmd-text').textContent=lines.join('\n');document.getElementById('dv-cmd-out').style.display='block';
+  addActivity(`Devis généré pour ${co}`,'orange');
+}
+
+function copyCmd(){navigator.clipboard.writeText(document.getElementById('dv-cmd-text').textContent).then(()=>{const h=document.getElementById('dv-copy-hint');h.textContent='✅ Copié !';h.style.color='green';setTimeout(()=>{h.textContent='📋 Clique pour copier';h.style.color='';},2000);});}
+
+function devisToCommande(){
+  const co=document.getElementById('dv-company').value.trim();
+  if(!co){alert('Remplis les infos client d\'abord !');return;}
+  const ts=devisProducts.reduce((s,x)=>s+x.sell,0);
+  const desc=devisProducts.map(p=>p.name).join(' + ')||'Commande';
+  const c=getCommandes();
+  c.push({id:Date.now(),client:co,desc,montant:ts,date:new Date().toISOString().split('T')[0],livdate:'',ref:'',statut:'Devis accepté',notes:'Généré depuis onglet Devis'});
+  saveCommandes(c);
+  addActivity(`Commande créée pour ${co} — ${f2(ts)}`,'orange');
+  alert(`✅ Commande créée pour ${co} !\nMontant : ${f2(ts)}\n\nRetrouvez-la dans l'onglet Commandes.`);
+  showTab('commandes');
+}
+
+// Email templates
+function initTemplates(){
+  const tabs=document.getElementById('tpl-tabs');tabs.innerHTML='';
+  emailTemplates.forEach(t=>{
+    const btn=document.createElement('button');btn.className='tpl-tab';btn.textContent=t.label;
+    btn.addEventListener('click',()=>{document.querySelectorAll('.tpl-tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');curTpl=t;renderTpl();});
+    tabs.appendChild(btn);
+  });
+}
+
+function renderTpl(){if(!curTpl)return;document.getElementById('tpl-body').textContent=curTpl.fn(document.getElementById('dv-contact').value.trim()||document.getElementById('dv-company').value.trim(),document.getElementById('dv-ville').value.trim()?`entreprises de ${document.getElementById('dv-ville').value.trim()}`:'entreprises de la région');}
+
+function copyTpl(){
+  const txt=document.getElementById('tpl-body').textContent;if(!txt||txt.startsWith('←'))return;
+  navigator.clipboard.writeText(txt).then(()=>{const h=document.getElementById('tpl-copy-hint');h.textContent='✅ Copié !';h.style.color='green';setTimeout(()=>{h.textContent='📋 Cliquez pour copier';h.style.color='';},2000);});
+}
+// ═══════════════════════════════════════════════════════
+// COMMANDES
+// ═══════════════════════════════════════════════════════
+const cmdStatuts=['Devis accepté','En production','Expédié','Livré','Facturé','Payé'];
+const cmdColors={'Devis accepté':'#60a5fa','En production':'#a78bfa','Expédié':'#fbbf24','Livré':'#2dd4bf','Facturé':'#4ade80','Payé':'#86efac'};
+const cmdBgs={'Devis accepté':'#1e3a5f','En production':'#1e1b4b','Expédié':'#1c1917','Livré':'#1c2526','Facturé':'#052e16','Payé':'#14532d'};
+
+function addCommande(){
+  const client=document.getElementById('cmd-client').value.trim(),desc=document.getElementById('cmd-desc').value.trim(),montant=parseFloat(document.getElementById('cmd-montant').value);
+  if(!client||!desc||isNaN(montant)||montant<=0){alert('Remplis client, description et montant !');return;}
+  const c=getCommandes();
+  const cmd={id:Date.now(),client,desc,montant,date:document.getElementById('cmd-date').value,livdate:document.getElementById('cmd-livdate').value,ref:document.getElementById('cmd-ref').value.trim(),statut:document.getElementById('cmd-statut').value,notes:document.getElementById('cmd-notes').value.trim()};
+  c.push(cmd);saveCommandes(c);
+  ['cmd-client','cmd-desc','cmd-montant','cmd-livdate','cmd-ref','cmd-notes'].forEach(id=>{const el=document.getElementById(id);el.value='';});
+  document.getElementById('cmd-date').value=new Date().toISOString().split('T')[0];
+  addActivity(`Commande enregistrée : ${client} — ${f2(montant)}`,'orange');
+  renderCommandes();
+}
+
+function renderCommandes(){
+  const c=getCommandes();
+  const filter=document.getElementById('cmd-filter').value;
+  const filtered=filter?c.filter(x=>x.statut===filter):c;
+
+  // KPIs
+  cmdStatuts.forEach((s,i)=>{document.getElementById('cmd-k'+(i+1)).textContent=c.filter(x=>x.statut===s).length;});
+
+  // Pipeline
+  const pc=document.getElementById('pipeline-cols');pc.innerHTML='';
+  cmdStatuts.forEach(s=>{
+    const col=document.createElement('div');col.className='pipeline-col';
+    col.innerHTML=`<div class="pipeline-col-hd" style="background:${cmdBgs[s]};color:${cmdColors[s]}">${s}</div>`;
+    const items=c.filter(x=>x.statut===s);
+    items.forEach(cmd=>{
+      const card=document.createElement('div');card.className='pipeline-card';
+      card.innerHTML=`<div class="pc-nm">${cmd.client}</div><div class="pc-mt">${cmd.ref||'—'}</div><div class="pc-am">${f2(cmd.montant)}</div>`;
+      card.onclick=()=>openCmdModal(cmd.id);
+      col.appendChild(card);
+    });
+    pc.appendChild(col);
+  });
+
+  // Table
+  const tb=document.getElementById('cmd-tbody');tb.innerHTML='';
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#64748b;padding:18px">Aucune commande</td></tr>';return;}
+  const sorted=[...filtered].sort((a,b)=>b.id-a.id);
+  sorted.forEach((cmd,i)=>{
+    const sBg=cmdBgs[cmd.statut]||'#1e293b',sCol=cmdColors[cmd.statut]||'#94a3b8';
+    const liv=cmd.livdate?new Date(cmd.livdate).toLocaleDateString('fr-FR'):'—';
+    const isLate=cmd.livdate&&new Date(cmd.livdate)<new Date()&&cmd.statut!=='Livré'&&cmd.statut!=='Payé';
+    tb.innerHTML+=`<tr><td style="color:#64748b">${i+1}</td><td><strong style="color:var(--bright)">${cmd.client}</strong>${cmd.ref?`<br><span style="font-size:9px;color:#64748b">${cmd.ref}</span>`:''}</td><td style="color:#94a3b8;font-size:10px">${cmd.desc.length>40?cmd.desc.slice(0,40)+'…':cmd.desc}</td><td><strong style="color:#4ade80">${f2(cmd.montant)}</strong></td><td><span class="status-badge" style="background:${sBg};color:${sCol}">${cmd.statut}</span></td><td style="color:${isLate?'#ef4444':'#94a3b8'}">${liv}${isLate?' ⚠️':''}</td><td style="display:flex;gap:4px"><button class="cmd-del" onclick="openCmdModal(${cmd.id})" title="Détail">👁️</button><button class="cmd-del" onclick="advanceCmdById(${cmd.id})" title="Étape suivante">➡️</button><button class="cmd-del" onclick="deleteCmdById(${cmd.id})" style="color:#64748b">✕</button></td></tr>`;
+  });
+
+  // Stats vueglobale
+  const active=c.filter(x=>x.statut!=='Payé');
+  const pipelineVal=active.reduce((s,x)=>s+x.montant,0);
+  const statEl=document.getElementById('stat-pipeline');if(statEl)statEl.textContent=f2(pipelineVal);
+  const statTotEl=document.getElementById('stat-cmd-tot');if(statTotEl)statTotEl.textContent=c.length;
+}
+
+function openCmdModal(id){
+  const c=getCommandes().find(x=>x.id===id);if(!c)return;
+  currentCmdId=id;
+  document.getElementById('cmd-modal-title').textContent=`📦 ${c.client}`;
+  const nextStat=cmdStatuts[cmdStatuts.indexOf(c.statut)+1];
+  const sCol=cmdColors[c.statut]||'#94a3b8';
+  document.getElementById('cmd-modal-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:#0f172a;border-radius:7px;padding:9px"><div style="font-size:9px;color:#64748b;margin-bottom:2px">STATUT</div><div style="font-size:13px;font-weight:700;color:${sCol}">${c.statut}</div></div>
+      <div style="background:#0f172a;border-radius:7px;padding:9px"><div style="font-size:9px;color:#64748b;margin-bottom:2px">MONTANT</div><div style="font-size:13px;font-weight:700;color:#4ade80">${f2(c.montant)}</div></div>
+    </div>
+    <div style="background:#0f172a;border-radius:7px;padding:10px;margin-bottom:8px;font-size:10px;color:#94a3b8;line-height:1.6">
+      <strong style="color:#60a5fa;display:block;margin-bottom:3px">📦 Description</strong>${c.desc}
+    </div>
+    ${c.ref?`<div style="font-size:10px;color:#64748b;margin-bottom:6px">Réf : ${c.ref}</div>`:''}
+    ${c.date?`<div style="font-size:10px;color:#64748b;margin-bottom:3px">📅 Commande : ${new Date(c.date).toLocaleDateString('fr-FR')}</div>`:''}
+    ${c.livdate?`<div style="font-size:10px;color:#64748b;margin-bottom:3px">🚚 Livraison prévue : ${new Date(c.livdate).toLocaleDateString('fr-FR')}</div>`:''}
+    ${c.notes?`<div style="background:#0f172a;border-radius:7px;padding:8px;font-size:10px;color:#94a3b8;margin-top:8px">${c.notes}</div>`:''}
+    <div style="margin-top:10px;display:flex;gap:5px;flex-wrap:wrap">${cmdStatuts.map(s=>`<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:${cmdBgs[s]};color:${cmdColors[s]};${s===c.statut?'border:2px solid '+cmdColors[s]:''}">${s}</span>`).join('')}</div>`;
+  const btn=document.getElementById('cmd-modal-next-btn');
+  if(nextStat){btn.textContent=`➡️ Passer à "${nextStat}"`;btn.style.display='block';}
+  else{btn.style.display='none';}
+  document.getElementById('cmd-modal').classList.add('vis');
+}
+
+function advanceCommande(){
+  if(!currentCmdId)return;
+  const cmds=getCommandes();
+  const idx=cmds.findIndex(x=>x.id===currentCmdId);
+  if(idx<0)return;
+  const cur=cmds[idx].statut,ni=cmdStatuts.indexOf(cur)+1;
+  if(ni>=cmdStatuts.length)return;
+  const next=cmdStatuts[ni];
+  cmds[idx].statut=next;
+  saveCommandes(cmds);
+  addActivity(`Commande ${cmds[idx].client} → ${next}`,'orange');
+  document.getElementById('cmd-modal').classList.remove('vis');
+  renderCommandes();
+}
+
+function advanceCmdById(id){
+  const cmds=getCommandes();
+  const idx=cmds.findIndex(x=>x.id===id);if(idx<0)return;
+  const ni=cmdStatuts.indexOf(cmds[idx].statut)+1;
+  if(ni>=cmdStatuts.length){alert('Commande déjà au stade final (Payé) !');return;}
+  const next=cmdStatuts[ni];
+  if(!confirm(`Passer "${cmds[idx].client}" à "${next}" ?`))return;
+  cmds[idx].statut=next;saveCommandes(cmds);
+  addActivity(`${cmds[idx].client} → ${next}`,'orange');
+  if(next==='Payé'){
+    const r=getRecettes();
+    r.push({id:Date.now(),date:new Date().toISOString().split('T')[0],client:cmds[idx].client,fac:cmds[idx].ref||'FAC-AUTO',desc:cmds[idx].desc.slice(0,50),montant:cmds[idx].montant});
+    saveRecettes(r);
+    addActivity(`💰 Recette auto-ajoutée : ${cmds[idx].client} ${f2(cmds[idx].montant)}`,'green');
+    alert(`✅ Commande marquée "Payée" !\nLa recette de ${f2(cmds[idx].montant)} a été automatiquement ajoutée dans Finances.`);
+  }
+  renderCommandes();
+}
+
+function deleteCmdById(id){if(!confirm('Supprimer cette commande ?'))return;saveCommandes(getCommandes().filter(x=>x.id!==id));renderCommandes();}
+
+// ═══════════════════════════════════════════════════════
+// PROSPECTION
+// ═══════════════════════════════════════════════════════
+function renderProspList(){
+  const el=document.getElementById('prosp-list');el.innerHTML='';
+  const fs=document.getElementById('p-fsect').value,fp=document.getElementById('p-fprio').value;
+  const contacts=getContacts();
+  const sorted=[...crmData].sort((a,b)=>{const po={"🔥 Haute":0,"⚡ Moyenne":1,"🌱 Basse":2};return (po[a.priorite]||1)-(po[b.priorite]||1);});
+  const filtered=sorted.filter(c=>(!fs||c.secteur===fs)&&(!fp||c.priorite===fp));
+  filtered.forEach(c=>{
+    const ct=contacts[c.id]||{};
+    const prioC=c.priorite==="🔥 Haute"?"pp-h":c.priorite==="🌱 Basse"?"pp-b":"pp-m";
+    const div=document.createElement('div');div.className='pc';
+    div.innerHTML=`
+      <div class="pc-icon">${c.icon}</div>
+      <div class="pc-info">
+        <div class="pc-name">${c.nom}</div>
+        <div class="pc-meta">${c.secteur} · ${c.ville}${c.tel?' · '+c.tel:''}</div>
+        <div class="pc-besoins">${c.besoins}</div>
+        ${ct.lastContact?`<div style="margin-top:3px;color:#94a3b8;font-size:9px">Dernier contact : ${ct.lastContact} (${ct.lastType||''})</div>`:''}
+      </div>
+      <div class="pc-right">
+        <div style="display:flex;gap:5px;align-items:center">
+          <span class="pc-prio ${prioC}">${c.priorite}</span>
+          <span class="${c.statut==='Client'?'dbg dbg-c':'stat-badge'}">${c.statut}</span>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="pca pca-email" onclick="openEmailModal(${c.id})">✉️ Email</button>
+          ${c.tel?`<button class="pca pca-call" onclick="logContact(${c.id},'Appel')">📞 Appel</button>`:''}
+          <button class="pca pca-stat" onclick="logContact(${c.id},'Contacté')">✓ Contacté</button>
+        </div>
+        <div style="font-size:9px;color:#64748b">${ct.lastContact?'':'Jamais contacté'}</div>
+      </div>`;
+    el.appendChild(div);
+  });
+  const allC=getContacts();const now=new Date(),thisMonth=now.getMonth();
+  let contacted=0;Object.values(allC).forEach(ct=>{if(ct.lastContact){const d=new Date(ct.lastContact.split('/').reverse().join('-'));if(d.getMonth()===thisMonth)contacted++;}});
+  document.getElementById('p-count-c').textContent=contacted;
+  document.getElementById('p-taux').textContent=((crmData.filter(x=>x.statut==='Client').length/crmData.length)*100).toFixed(1)+'%';
+}
+
+function logContact(id,type){
+  const contacts=getContacts(),now=new Date();
+  const ds=`${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  contacts[id]={...contacts[id],lastContact:ds,lastType:type};
+  saveContacts(contacts);
+  const c=crmData.find(x=>x.id===id);
+  addActivity(`${type} : ${c?c.nom:'Prospect'}`,'blue');
+  renderProspList();
+}
+
+function openEmailModal(id){
+  const c=crmData.find(x=>x.id===id);if(!c)return;
+  const tpl=emailTemplates[0];
+  document.getElementById('modal-title').textContent=`✉️ Prospection — ${c.nom}`;
+  document.getElementById('modal-email-body').value=tpl.fn(c.nom,c.secteur);
+  document.getElementById('email-modal').classList.add('vis');
+  logContact(id,'Email envoyé');
+}
+
+function closeModal(){document.getElementById('email-modal').classList.remove('vis');}
+function copyModalEmail(){navigator.clipboard.writeText(document.getElementById('modal-email-body').value).then(()=>{const b=document.querySelector('.mbtn-copy');b.textContent='✅ Copié !';setTimeout(()=>b.textContent='📋 Copier l\'email',2000);});}
+// ═══════════════════════════════════════════════════════
+// FINANCES
+// ═══════════════════════════════════════════════════════
+function switchFinTab(tab){
+  ['recettes','depenses','bilan'].forEach(t=>{
+    document.getElementById('fin-panel-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('.fin-tab').forEach((btn,i)=>btn.classList.toggle('active',['recettes','depenses','bilan'][i]===tab));
+  if(tab==='bilan')renderBilan();
+  if(tab==='depenses')renderDepenses();
+}
+
+function addRecette(){
+  const date=document.getElementById('fin-date').value,client=document.getElementById('fin-client').value.trim(),fac=document.getElementById('fin-fac').value.trim(),desc=document.getElementById('fin-desc').value.trim(),montant=parseFloat(document.getElementById('fin-montant').value);
+  if(!date||!client||isNaN(montant)||montant<=0){alert('Remplis la date, le client et le montant !');return;}
+  const r=getRecettes();r.push({id:Date.now(),date,client,fac,desc,montant});saveRecettes(r);
+  ['fin-client','fin-fac','fin-desc','fin-montant'].forEach(id=>document.getElementById(id).value='');
+  addActivity(`Recette : ${client} — ${f2(montant)}`,'green');
+  renderFinances();
+}
+
+function deleteRecette(id){const r=getRecettes().filter(x=>x.id!==id);saveRecettes(r);renderFinances();}
+function clearRecettes(){saveRecettes([]);renderFinances();}
+
+function addDepense(){
+  const date=document.getElementById('dep-date').value,label=document.getElementById('dep-label').value.trim(),cat=document.getElementById('dep-cat').value,montant=parseFloat(document.getElementById('dep-montant').value),note=document.getElementById('dep-note').value.trim();
+  if(!date||!label||isNaN(montant)||montant<=0){alert('Remplis la date, le libellé et le montant !');return;}
+  const d=getDepenses();d.push({id:Date.now(),date,label,cat,montant,note});saveDepenses(d);
+  ['dep-label','dep-montant','dep-note'].forEach(id=>document.getElementById(id).value='');
+  addActivity(`Dépense : ${label} — ${f2(montant)}`,'blue');
+  renderDepenses();
+}
+
+function renderDepenses(){
+  const d=getDepenses();
+  const tb=document.getElementById('dep-tbody');tb.innerHTML='';
+  if(!d.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#64748b;padding:18px">Aucune dépense</td></tr>';}
+  else{
+    const sorted=[...d].sort((a,b)=>b.date.localeCompare(a.date));
+    sorted.forEach((x,i)=>{
+      const dStr=x.date?x.date.split('-').reverse().join('/'):'—';
+      tb.innerHTML+=`<tr><td style="color:#64748b">${i+1}</td><td>${dStr}</td><td><strong>${x.label}</strong></td><td style="color:#94a3b8">${x.cat}</td><td style="color:#64748b;font-size:9.5px">${x.note||'—'}</td><td><strong style="color:#ef4444">${f2(x.montant)}</strong></td><td><button class="fin-del" onclick="deleteDepense(${x.id})">✕</button></td></tr>`;
+    });
+  }
+  // By category
+  const byCat=d.reduce((acc,x)=>{acc[x.cat]=(acc[x.cat]||0)+x.montant;return acc;},{});
+  const total=d.reduce((s,x)=>s+x.montant,0);
+  const el=document.getElementById('dep-by-cat');
+  if(!Object.keys(byCat).length){el.innerHTML='<div style="color:#64748b;font-size:11px;text-align:center;padding:10px">Aucune dépense</div>';return;}
+  el.innerHTML=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>`
+    <div class="dpi"><div class="dpi-l"><span>${cat}</span><span>${f2(val)}</span></div>
+    <div class="dpb"><div class="dpf" style="width:${total>0?(val/total*100):0}%;background:#ef4444"></div></div></div>`).join('');
+  document.getElementById('fin-dep-tot').textContent=f2(total);
+}
+
+function deleteDepense(id){saveDepenses(getDepenses().filter(x=>x.id!==id));renderDepenses();renderFinances();}
+
+function renderBilan(){
+  const r=getRecettes(),d=getDepenses();
+  const totalCA=r.reduce((s,x)=>s+x.montant,0);
+  const totalDep=d.reduce((s,x)=>s+x.montant,0);
+  const net=totalCA-totalDep;
+  const urssaf=totalCA*0.123;
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  document.getElementById('bil-ca').textContent=f2(totalCA);
+  document.getElementById('bil-dep').textContent=f2(totalDep);
+  document.getElementById('bil-net').textContent=f2(net);
+  document.getElementById('bil-marg').textContent=totalCA>0?((net/totalCA)*100).toFixed(1)+'%':'—';
+  document.getElementById('bil-urssaf').textContent=f2(urssaf);
+  document.getElementById('bil-apres').textContent=f2(net-urssaf);
+  document.getElementById('bil-mois-lbl').textContent=MOIS[m]+' '+y;
+  // Mensuel
+  const mCA=r.filter(x=>x.date&&x.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).reduce((s,x)=>s+x.montant,0);
+  const mDep=d.filter(x=>x.date&&x.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).reduce((s,x)=>s+x.montant,0);
+  document.getElementById('bil-mensuel').innerHTML=`
+    <div class="fin-bilanrow"><span class="fb-l">CA ce mois</span><span class="fb-v" style="color:#4ade80">${f2(mCA)}</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Dépenses ce mois</span><span class="fb-v" style="color:#ef4444">${f2(mDep)}</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Résultat mensuel</span><span class="fb-v" style="color:var(--orange)">${f2(mCA-mDep)}</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Objectif mensuel</span><span class="fb-v" style="color:#38bdf8">3 000 €</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Avancement</span><span class="fb-v" style="color:${mCA>=3000?'#4ade80':'#fbbf24'}">${((mCA/3000)*100).toFixed(0)}%</span></div>`;
+  // Projection
+  const moisEcoules=m+1;
+  const proj=moisEcoules>0?(totalCA/moisEcoules)*12:0;
+  const moisPlatefond=totalCA>0?Math.ceil((PLAFOND-totalCA)/(totalCA/moisEcoules)):null;
+  document.getElementById('bil-projection').innerHTML=`
+    <div class="fin-bilanrow"><span class="fb-l">CA projeté (12 mois)</span><span class="fb-v" style="color:var(--orange)">${f2(proj)}</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Mois écoulés</span><span class="fb-v">${moisEcoules} / 12</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Plafond restant</span><span class="fb-v" style="color:#fbbf24">${f2(Math.max(0,PLAFOND-totalCA))}</span></div>
+    <div class="fin-bilanrow"><span class="fb-l">Mois avant plafond</span><span class="fb-v" style="color:#a78bfa">${moisPlatefond?moisPlatefond+' mois':'—'}</span></div>`;
+}
+
+function renderFinances(){
+  const r=getRecettes();
+  const total=r.reduce((s,x)=>s+x.montant,0);
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  const mois=r.filter(x=>x.date&&x.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).reduce((s,x)=>s+x.montant,0);
+  const dep=getDepenses().reduce((s,x)=>s+x.montant,0);
+  const reste=Math.max(0,PLAFOND-total),pct=Math.min(100,(total/PLAFOND)*100);
+  document.getElementById('fin-ca-tot').textContent=f2(total);
+  document.getElementById('fin-ca-mois').textContent=f2(mois);
+  document.getElementById('fin-mois-lbl').textContent=MOIS[m]+' '+y;
+  document.getElementById('fin-ben').textContent=f2(total-dep);
+  document.getElementById('fin-dep-tot').textContent=f2(dep);
+  document.getElementById('fin-reste').textContent=f2(reste);
+  document.getElementById('pla-ca').textContent='CA : '+f2(total);
+  document.getElementById('pla-pct').textContent=pct.toFixed(1)+'%';
+  const fill=document.getElementById('pla-fill');fill.style.width=pct+'%';
+  fill.className='pla-fill'+(pct>=90?' danger':pct>=70?' warn':'');
+  const palert=document.getElementById('pla-alert');
+  if(pct>=90){palert.style.display='block';palert.innerHTML='⚠️ <strong>Attention !</strong> Vous approchez du plafond micro-entrepreneur.';}
+  else if(pct>=70){palert.style.display='block';palert.innerHTML='⚡ Vous avez atteint '+pct.toFixed(0)+'% du plafond.';}
+  else palert.style.display='none';
+  // Table
+  const tb=document.getElementById('fin-tbody');tb.innerHTML='';
+  if(!r.length)tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#64748b;padding:18px">Aucune recette</td></tr>';
+  else r.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach((x,i)=>{
+    const d=x.date?x.date.split('-').reverse().join('/'):'—';
+    tb.innerHTML+=`<tr><td style="color:#64748b">${i+1}</td><td>${d}</td><td><strong>${x.client}</strong></td><td style="color:#60a5fa">${x.fac||'—'}</td><td style="color:#94a3b8;font-size:9.5px">${x.desc||'—'}</td><td><strong style="color:#4ade80">${f2(x.montant)}</strong></td><td><button class="fin-del" onclick="deleteRecette(${x.id})">✕</button></td></tr>`;
+  });
+  // Bar chart
+  const bm=document.getElementById('bar-months');bm.innerHTML='';
+  const byMonth=Array(12).fill(0);
+  r.filter(x=>x.date&&x.date.startsWith(y+'')).forEach(x=>{const mo=parseInt(x.date.split('-')[1])-1;if(mo>=0&&mo<12)byMonth[mo]+=x.montant;});
+  const maxM=Math.max(...byMonth,1);
+  byMonth.forEach((v,i)=>{
+    const d=document.createElement('div');d.className='bm-col';
+    const p=Math.round((v/maxM)*70);
+    d.innerHTML=`<div class="bm-val">${v>0?Math.round(v)+'€':''}</div><div class="bm-bar" style="height:${p+2}px;background:${i===m?'var(--orange)':'#334155'}"></div><div class="bm-lbl">${MOIS[i]}</div>`;
+    bm.appendChild(d);
+  });
+  // URSSAF
+  const ul=document.getElementById('urssaf-list');ul.innerHTML='';
+  [{p:'Jan-Mar',due:'15/04'},{p:'Avr-Jun',due:'15/07'},{p:'Jul-Sep',due:'15/10'},{p:'Oct-Déc',due:'15/01'}].forEach(d=>{
+    const isPast=new Date()>new Date('2026-'+d.due.split('/').reverse().join('-'));
+    ul.innerHTML+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1e293b"><span style="font-size:10px;color:#94a3b8">Période ${d.p}</span><span style="font-size:10px;font-weight:700;color:${isPast?'#4ade80':'#fbbf24'}">Échéance ${d.due} ${isPast?'✓':''}</span></div>`;
+  });
+  document.getElementById('dash-fac').textContent=f2(total);
+}
+
+function exportCSV(){
+  const r=getRecettes();if(!r.length){alert('Aucune recette à exporter');return;}
+  const rows=['Date,Client,N° Facture,Description,Montant HT',...r.map(x=>`${x.date||''},${x.client},${x.fac||''},${x.desc||''},${x.montant.toFixed(2)}`)];
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(rows.join('\n'));a.download=`DB7_Recettes_${new Date().getFullYear()}.csv`;a.click();
+}
+// ═══════════════════════════════════════════════════════
+// TÂCHES
+// ═══════════════════════════════════════════════════════
+const catCls={'Prospection':'cat-prosp','Devis':'cat-devis','Livraison':'cat-livr','Finance':'cat-fin','Admin':'cat-admin','Autre':'cat-autre'};
+const prioCls={'Urgente':'prio-u','Normale':'prio-n','Basse':'prio-b'};
+const prioIco={'Urgente':'🔴','Normale':'🟡','Basse':'⚪'};
+
+function addTache(){
+  const titre=document.getElementById('tsk-titre').value.trim();
+  if(!titre){alert('Donne un titre à la tâche !');return;}
+  const t=getTaches();
+  t.push({id:Date.now(),titre,cat:document.getElementById('tsk-cat').value,prio:document.getElementById('tsk-prio').value,echeance:document.getElementById('tsk-ech').value,link:document.getElementById('tsk-link').value.trim(),statut:'À faire',created:new Date().toISOString()});
+  saveTaches(t);
+  document.getElementById('tsk-titre').value='';document.getElementById('tsk-ech').value='';document.getElementById('tsk-link').value='';
+  addActivity(`Tâche créée : ${titre}`,'purple');
+  renderTaches();
+}
+
+function quickTask(titre,cat,prio){
+  const t=getTaches();
+  t.push({id:Date.now(),titre,cat,prio,echeance:'',link:'',statut:'À faire',created:new Date().toISOString()});
+  saveTaches(t);addActivity(`Tâche : ${titre}`,'purple');renderTaches();
+}
+
+function updateTacheStatut(id,newStatut){
+  const t=getTaches();const idx=t.findIndex(x=>x.id===id);if(idx<0)return;
+  t[idx].statut=newStatut;
+  if(newStatut==='Terminée')t[idx].completedAt=new Date().toISOString();
+  saveTaches(t);
+  addActivity(`Tâche "${t[idx].titre}" → ${newStatut}`,'purple');
+  renderTaches();
+}
+
+function deleteTache(id){if(!confirm('Supprimer cette tâche ?'))return;saveTaches(getTaches().filter(x=>x.id!==id));renderTaches();}
+function clearDoneTaches(){if(!confirm('Supprimer toutes les tâches terminées ?'))return;saveTaches(getTaches().filter(x=>x.statut!=='Terminée'));renderTaches();}
+
+function renderTaches(){
+  const all=getTaches();
+  const filterCat=document.getElementById('tsk-filter-cat').value;
+  const filterPrio=document.getElementById('tsk-filter-prio').value;
+  const filtered=all.filter(t=>(!filterCat||t.cat===filterCat)&&(!filterPrio||t.prio===filterPrio));
+  const today=new Date();today.setHours(0,0,0,0);
+
+  const afaire=filtered.filter(x=>x.statut==='À faire');
+  const encours=filtered.filter(x=>x.statut==='En cours');
+  const termine=filtered.filter(x=>x.statut==='Terminée');
+
+  // KPIs
+  const urgentes=all.filter(x=>x.prio==='Urgente'&&x.statut!=='Terminée').length;
+  document.getElementById('tsk-k1').textContent=urgentes;
+  document.getElementById('tsk-k2').textContent=all.filter(x=>x.statut==='En cours').length;
+  document.getElementById('tsk-k3').textContent=all.filter(x=>x.statut==='À faire').length;
+  const now=new Date();
+  document.getElementById('tsk-k4').textContent=all.filter(x=>x.statut==='Terminée'&&x.completedAt&&new Date(x.completedAt).getMonth()===now.getMonth()).length;
+
+  // Column counts
+  document.getElementById('tsk-col1-count').textContent=afaire.length;
+  document.getElementById('tsk-col2-count').textContent=encours.length;
+  document.getElementById('tsk-col3-count').textContent=termine.length;
+
+  // Notif
+  if(urgentes>0){document.getElementById('notif-dot').style.display='block';document.getElementById('notif-count').textContent='✅ '+urgentes;}
+  else{document.getElementById('notif-dot').style.display='none';document.getElementById('notif-count').textContent='✅';}
+
+  function buildCard(tk){
+    const isOverdue=tk.echeance&&new Date(tk.echeance)<today&&tk.statut!=='Terminée';
+    const eDateStr=tk.echeance?new Date(tk.echeance).toLocaleDateString('fr-FR'):'';
+    return `<div class="tsk-card" style="${tk.prio==='Urgente'&&tk.statut!=='Terminée'?'border-color:#ef4444':''}">
+      <div class="tsk-card-top">
+        <div class="tsk-card-title">${prioIco[tk.prio]||'⚪'} ${tk.titre}</div>
+      </div>
+      <div class="tsk-card-meta">
+        <span class="cat-badge ${catCls[tk.cat]||'cat-autre'}">${tk.cat}</span>
+        ${eDateStr?`<span class="${isOverdue?'echeance-red':'echeance-orange'}" style="font-size:9px;margin-left:5px">📅 ${eDateStr}${isOverdue?' ⚠️':''}</span>`:''}
+        ${tk.link?`<span style="font-size:9px;color:#64748b;display:block;margin-top:2px">🔗 ${tk.link}</span>`:''}
+      </div>
+      <div class="tsk-actions">
+        ${tk.statut!=='En cours'&&tk.statut!=='Terminée'?`<button class="tsk-btn tsk-prog" onclick="updateTacheStatut(${tk.id},'En cours')">▶ En cours</button>`:''}
+        ${tk.statut!=='Terminée'?`<button class="tsk-btn tsk-done" onclick="updateTacheStatut(${tk.id},'Terminée')">✓ Fait</button>`:''}
+        ${tk.statut==='Terminée'?`<button class="tsk-btn tsk-prog" onclick="updateTacheStatut(${tk.id},'À faire')">↩ Rouvrir</button>`:''}
+        <button class="tsk-btn tsk-del-btn" onclick="deleteTache(${tk.id})">✕</button>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('tsk-col-afaire').innerHTML=afaire.length?afaire.sort((a,b)=>a.prio==='Urgente'?-1:b.prio==='Urgente'?1:0).map(buildCard).join(''):'<div style="color:#475569;font-size:10px;text-align:center;padding:10px">Aucune tâche</div>';
+  document.getElementById('tsk-col-encours').innerHTML=encours.length?encours.map(buildCard).join(''):'<div style="color:#475569;font-size:10px;text-align:center;padding:10px">Aucune tâche</div>';
+  document.getElementById('tsk-col-termine').innerHTML=termine.length?termine.slice(0,10).map(buildCard).join(''):'<div style="color:#475569;font-size:10px;text-align:center;padding:10px">Aucune tâche</div>';
+}
+
+// ═══════════════════════════════════════════════════════
+// STATISTIQUES
+// ═══════════════════════════════════════════════════════
+function renderStats(){
+  const r=getRecettes(),c=getCommandes();
+  const total=r.reduce((s,x)=>s+x.montant,0);
+  const now=new Date(),y=now.getFullYear();
+  const byMonth=Array(12).fill(0);
+  r.filter(x=>x.date&&x.date.startsWith(y+'')).forEach(x=>{const mo=parseInt(x.date.split('-')[1])-1;if(mo>=0&&mo<12)byMonth[mo]+=x.montant;});
+  const maxM=Math.max(...byMonth,1);
+  const moisEcoules=now.getMonth()+1;
+  const proj=moisEcoules>0?(total/moisEcoules)*12:0;
+  const bestVal=Math.max(...byMonth);const bestMois=byMonth.indexOf(bestVal);
+  const pipelineVal=c.filter(x=>x.statut!=='Payé').reduce((s,x)=>s+x.montant,0);
+  const statProj=document.getElementById('stat-proj');if(statProj)statProj.textContent=proj>0?f2(proj):'—';
+  const statProj2=document.getElementById('stat-proj2');if(statProj2)statProj2.textContent=proj>0?f2(proj):'—';
+  const statBest=document.getElementById('stat-best');if(statBest)statBest.textContent=bestVal>0?f2(bestVal):'—';
+  const statBestLbl=document.getElementById('stat-best-lbl');if(statBestLbl)statBestLbl.textContent=bestVal>0?MOIS[bestMois]+' '+y:'pas encore';
+  const statCmdTot=document.getElementById('stat-cmd-tot');if(statCmdTot)statCmdTot.textContent=c.length;
+  const statPipeline=document.getElementById('stat-pipeline');if(statPipeline)statPipeline.textContent=f2(pipelineVal);
+  const statCATot=document.getElementById('stat-ca-total');if(statCATot)statCATot.textContent=f2(total);
+  const statCAAvg=document.getElementById('stat-ca-avg');if(statCAAvg)statCAAvg.textContent=f2(moisEcoules>0?total/moisEcoules:0);
+  const moisPlatefond=total>0&&moisEcoules>0?Math.ceil((PLAFOND-total)/(total/moisEcoules)):null;
+  const statMoisPlaf=document.getElementById('stat-mois-plaf');if(statMoisPlaf)statMoisPlaf.textContent=moisPlatefond?moisPlatefond+' mois':'—';
+  // Chart CA
+  const chartEl=document.getElementById('stat-chart-ca');
+  if(chartEl){
+    chartEl.innerHTML='';
+    byMonth.forEach((v,i)=>{
+      const pct=Math.max(4,(v/maxM)*100);
+      const col=i===now.getMonth()?'var(--orange)':v>0?'#38bdf8':'#1e293b';
+      const d=document.createElement('div');d.className='chart-col';
+      d.innerHTML=`<div class="chart-val">${v>0?Math.round(v)+'€':''}</div><div class="chart-bar" style="height:${pct}%;background:${col};width:100%"></div><div class="chart-label">${MOIS[i]}</div>`;
+      chartEl.appendChild(d);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.getElementById('live-date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('fin-date').value=new Date().toISOString().split('T')[0];
+document.getElementById('dep-date').value=new Date().toISOString().split('T')[0];
+document.getElementById('cmd-date').value=new Date().toISOString().split('T')[0];
+
+initMap();mapInit=true;
+renderList(crmData);renderTable(crmData);
+initCatalogue();initTemplates();
+renderProspList();renderFinances();
+renderCommandes();renderTaches();
+renderVueGlobale();renderStats();
+</script>
+</body>
+</html>
